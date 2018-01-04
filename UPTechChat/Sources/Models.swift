@@ -7,53 +7,44 @@
 //
 
 import Foundation
+import ObjectMapper
 
-protocol FirebaseSerializable {
-    var identifier: String { get }
-    var jsonValue: [String: Any] { get }
-    init?(identifier: String, json: [String: Any])
-}
-
-struct Chat: FirebaseSerializable {
-    let identifier: String
+struct Chat {
     let name: String
-    let lastMessage: String
+    let lastMessage: Message?
+}
 
-    init?(identifier: String, json: [String : Any]) {
-        guard
-            let name = json["name"] as? String,
-            let lastMessage = json["lastMessage"] as? String
-        else {
-            return nil
-        }
-
-        self.identifier = identifier
-        self.name = name
-        self.lastMessage = lastMessage
+extension Chat: ImmutableMappable {
+    private enum Keys {
+        static let Name = "name"
+        static let LastMessage = "lastMessage"
     }
 
-    var jsonValue: [String : Any] {
-        return [
-            "name": name,
-            "lastMessage": lastMessage
-        ]
+    init(map: Map) throws {
+        name = try map.value(Keys.Name)
+        lastMessage = try? map.value(Keys.LastMessage)
+    }
+
+    func mapping(map: Map) {
+        name >>> map[Keys.Name]
+        lastMessage >>> map[Keys.LastMessage]
     }
 }
 
-struct Message: FirebaseSerializable {
-    let identifier: String
+struct Message {
     let body: String
+}
 
-    init?(identifier: String, json: [String : Any]) {
-        guard let body = json["body"] as? String else {
-            return nil
-        }
-
-        self.identifier = identifier
-        self.body = body
+extension Message: ImmutableMappable {
+    private enum Keys {
+        static let Body = "body"
     }
 
-    var jsonValue: [String : Any] {
-        return ["body": body]
+    init(map: Map) throws {
+        body = try map.value(Keys.Body)
+    }
+
+    func mapping(map: Map) {
+        body >>> map[Keys.Body]
     }
 }
