@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AD_UNIT_ID_FOR_BANNER_TEST</key>
+	<string>ca-app-pub-3940256099942544/2934735716</string>
+	<key>AD_UNIT_ID_FOR_INTERSTITIAL_TEST</key>
+	<string>ca-app-pub-3940256099942544/4411468910</string>
+	<key>CLIENT_ID</key>
+	<string>222436862966-4teq7anh7j634t1bedsv9h8il4hqakge.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.222436862966-4teq7anh7j634t1bedsv9h8il4hqakge</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCdz3HhNw27dTSayQq5dRx0XIpjx4wVZwI</string>
+	<key>GCM_SENDER_ID</key>
+	<string>222436862966</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.uptechteam.UPTechChat</string>
+	<key>PROJECT_ID</key>
+	<string>uptechchat</string>
+	<key>STORAGE_BUCKET</key>
+	<string>uptechchat.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<true></true>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<false></false>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:222436862966:ios:9881582aaa9dde24</string>
+	<key>DATABASE_URL</key>
+	<string>https://uptechchat.firebaseio.com</string>
+</dict>
+</plist>

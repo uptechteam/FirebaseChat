@@ -7,19 +7,19 @@
 //
 
 import UIKit
+import FirebaseDatabase
 
 class ViewController: UIViewController {
-
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+
+        let database = Database.database().reference()
+        let provider = Provider<Chat>(reference: database.child("chats"))
     }
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
-
-
 }
 
