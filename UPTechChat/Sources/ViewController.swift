@@ -13,12 +13,13 @@ import RxSwift
 class ViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
 
-    private var chats = [FirebaseEntity<Chat>]()
+    private var chatEntities = [FirebaseEntity<Chat>]()
     private let disposeBag = DisposeBag()
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        self.title = "Chats"
         tableView.dataSource = self
         tableView.delegate = self
 
@@ -31,8 +32,8 @@ class ViewController: UIViewController {
 
         provider.fetch()
             .observeOn(MainScheduler.instance)
-            .subscribe(onNext: { [weak self] chats in
-                self?.chats = chats
+            .subscribe(onNext: { [weak self] chatEntities in
+                self?.chatEntities = chatEntities
                 self?.tableView.reloadData()
             })
             .disposed(by: disposeBag)
@@ -45,13 +46,13 @@ extension ViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return chats.count
+        return chatEntities.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ChatCell", for: indexPath)
 
-        let chat = chats[indexPath.row]
+        let chat = chatEntities[indexPath.row]
         cell.textLabel?.text = chat.model.name
         cell.detailTextLabel?.text = chat.model.lastMessage?.body
 
@@ -62,5 +63,9 @@ extension ViewController: UITableViewDataSource {
 extension ViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+
+        let chatEntity = chatEntities[indexPath.row]
+        let chatViewController = ChatViewController(chatEntity: chatEntity)
+        navigationController?.pushViewController(chatViewController, animated: true)
     }
 }

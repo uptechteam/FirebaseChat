@@ -33,18 +33,22 @@ extension Chat: ImmutableMappable {
 
 struct Message {
     let body: String
+    let date: Date
 }
 
 extension Message: ImmutableMappable {
     private enum Keys {
         static let Body = "body"
+        static let Date = "date"
     }
 
     init(map: Map) throws {
         body = try map.value(Keys.Body)
+        date = try map.value(Keys.Date, using: DateTransform())
     }
 
     func mapping(map: Map) {
         body >>> map[Keys.Body]
+        date >>> (map[Keys.Date], DateTransform())
     }
 }

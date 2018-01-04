@@ -6,11 +6,11 @@ target 'UPTechChat' do
   use_frameworks!
 
   # Pods for UPTechChat
-  pod 'Firebase/Core'
-  pod 'Firebase/Database'
-  pod 'MessageKit'
-  pod 'RxSwift',    '~> 4.0'
-  pod 'RxCocoa',    '~> 4.0'
+  pod 'Firebase/Core', '~> 4.5.0'
+  pod 'Firebase/Database', '~> 4.5.0'
+  pod 'MessageKit', '~> 0.10.0'
+  pod 'RxSwift', '~> 4.0'
+  pod 'RxCocoa', '~> 4.0'
   pod 'ObjectMapper', '~> 3.1'
 
 end

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6A7D9CF31FFE53D800ED398D /* ChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D9CF21FFE53D800ED398D /* ChatViewController.swift */; };
+		6A7D9CF51FFE5AED00ED398D /* UIKit+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */; };
+		6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D9CF61FFE69F500ED398D /* MessagesProvider.swift */; };
 		6AB592D01FFE38B80056479A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB592CF1FFE38B80056479A /* Models.swift */; };
 		6AB592D21FFE3B6C0056479A /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB592D11FFE3B6C0056479A /* Provider.swift */; };
 		6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE86C981FFE312500DB7C47 /* AppDelegate.swift */; };
@@ -19,6 +22,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6A7D9CF21FFE53D800ED398D /* ChatViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewController.swift; sourceTree = "<group>"; };
+		6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIKit+Chat.swift"; sourceTree = "<group>"; };
+		6A7D9CF61FFE69F500ED398D /* MessagesProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesProvider.swift; sourceTree = "<group>"; };
 		6AB592CF1FFE38B80056479A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		6AB592D11FFE3B6C0056479A /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		6AE86C951FFE312500DB7C47 /* UPTechChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UPTechChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -54,12 +60,23 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		6A7D9CF81FFE69F900ED398D /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				6A7D9CF61FFE69F500ED398D /* MessagesProvider.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
 		6AB592CE1FFE33990056479A /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				6A7D9CF81FFE69F900ED398D /* Library */,
+				6A7D9CF21FFE53D800ED398D /* ChatViewController.swift */,
 				6AE86C9A1FFE312500DB7C47 /* ViewController.swift */,
 				6AB592CF1FFE38B80056479A /* Models.swift */,
 				6AB592D11FFE3B6C0056479A /* Provider.swift */,
+				6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -248,8 +265,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				6AB592D21FFE3B6C0056479A /* Provider.swift in Sources */,
+				6A7D9CF51FFE5AED00ED398D /* UIKit+Chat.swift in Sources */,
 				6AE86C9B1FFE312500DB7C47 /* ViewController.swift in Sources */,
 				6AB592D01FFE38B80056479A /* Models.swift in Sources */,
+				6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */,
+				6A7D9CF31FFE53D800ED398D /* ChatViewController.swift in Sources */,
 				6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
