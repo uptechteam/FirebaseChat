@@ -20,6 +20,7 @@
 		6AE686F82003811E00E5580B /* ChatViewMessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686F72003811E00E5580B /* ChatViewMessageCell.swift */; };
 		6AE686FA2003813100E5580B /* Reusable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686F92003813100E5580B /* Reusable.swift */; };
 		6AE686FD200396EE00E5580B /* ChatViewLoadingCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686FC200396EE00E5580B /* ChatViewLoadingCell.swift */; };
+		6AE686FF2003995C00E5580B /* ChatViewHeaderCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686FE2003995C00E5580B /* ChatViewHeaderCell.swift */; };
 		6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE86C981FFE312500DB7C47 /* AppDelegate.swift */; };
 		6AE86C9B1FFE312500DB7C47 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE86C9A1FFE312500DB7C47 /* ViewController.swift */; };
 		6AE86C9E1FFE312500DB7C47 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AE86C9C1FFE312500DB7C47 /* Main.storyboard */; };
@@ -43,6 +44,7 @@
 		6AE686F72003811E00E5580B /* ChatViewMessageCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewMessageCell.swift; sourceTree = "<group>"; };
 		6AE686F92003813100E5580B /* Reusable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reusable.swift; sourceTree = "<group>"; };
 		6AE686FC200396EE00E5580B /* ChatViewLoadingCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewLoadingCell.swift; sourceTree = "<group>"; };
+		6AE686FE2003995C00E5580B /* ChatViewHeaderCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewHeaderCell.swift; sourceTree = "<group>"; };
 		6AE86C951FFE312500DB7C47 /* UPTechChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UPTechChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AE86C981FFE312500DB7C47 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		6AE86C9A1FFE312500DB7C47 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -109,6 +111,7 @@
 				6AE686F32003782400E5580B /* ChatDataSource.swift */,
 				6AE686F72003811E00E5580B /* ChatViewMessageCell.swift */,
 				6AE686FC200396EE00E5580B /* ChatViewLoadingCell.swift */,
+				6AE686FE2003995C00E5580B /* ChatViewHeaderCell.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -307,6 +310,7 @@
 				6A7D9CF51FFE5AED00ED398D /* UIKit+Chat.swift in Sources */,
 				6AE86C9B1FFE312500DB7C47 /* ViewController.swift in Sources */,
 				6AB592D01FFE38B80056479A /* Models.swift in Sources */,
+				6AE686FF2003995C00E5580B /* ChatViewHeaderCell.swift in Sources */,
 				6AE686F82003811E00E5580B /* ChatViewMessageCell.swift in Sources */,
 				6AE686F42003782400E5580B /* ChatDataSource.swift in Sources */,
 				6AE686FA2003813100E5580B /* Reusable.swift in Sources */,

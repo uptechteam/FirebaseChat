@@ -43,6 +43,8 @@ extension ChatView: UICollectionViewDelegateFlowLayout {
         switch dataSource.items[indexPath.row] {
         case .loading:
             return CGSize(width: collectionView.frame.width, height: 40)
+        case .header:
+            return CGSize(width: collectionView.frame.width, height: 16)
         case .message(let content):
             return CGSize(width: collectionView.frame.width, height: ChatViewMessageCell.preferredHeight(content: content, collectionViewFrame: collectionView.frame))
         }

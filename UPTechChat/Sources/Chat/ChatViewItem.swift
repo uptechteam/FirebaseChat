@@ -22,6 +22,7 @@ extension ChatViewMessageContent: Equatable {
 
 enum ChatViewItem {
     case loading
+    case header(String)
     case message(ChatViewMessageContent)
 }
 
@@ -30,6 +31,8 @@ extension ChatViewItem: Equatable {
         switch (lhs, rhs) {
         case (.loading, .loading):
             return true
+        case let (.header(lText), .header(rText)):
+            return lText == rText
         case let (.message(lhsContent), .message(rhsContent)):
             return lhsContent == rhsContent
         default:
