@@ -10,11 +10,13 @@ import Foundation
 
 struct ChatViewMessageContent {
     let body: String
+    let isCurrentSender: Bool
 }
 
 extension ChatViewMessageContent: Equatable {
     static func ==(lhs: ChatViewMessageContent, rhs: ChatViewMessageContent) -> Bool {
-        return lhs.body == rhs.body
+        return lhs.body == rhs.body &&
+            lhs.isCurrentSender == rhs.isCurrentSender
     }
 }
 

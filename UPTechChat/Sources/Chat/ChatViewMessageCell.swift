@@ -15,6 +15,8 @@ final class ChatViewMessageCell: UICollectionViewCell, Reusable {
 
     private let bubbleView = UIImageView()
     private let textLabel = UILabel()
+    private var pinToLeadingConstraint: NSLayoutConstraint?
+    private var pinToTrailingConstraint: NSLayoutConstraint?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -26,12 +28,19 @@ final class ChatViewMessageCell: UICollectionViewCell, Reusable {
     }
 
     private func setup() {
-        let cornerRadius = (Constants.FontSize + Constants.TextInsets.top + Constants.TextInsets.bottom) / 2
-        bubbleView.image = UIImage.cornerRoundedImage(color: UIColor(white: 0.9, alpha: 1), cornerRadius: cornerRadius)
         bubbleView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubbleView)
+
+        let pinToLeadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset)
+        pinToLeadingConstraint.priority = UILayoutPriority.defaultLow
+        self.pinToLeadingConstraint = pinToLeadingConstraint
+        let pinToTrailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
+        pinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
+        self.pinToTrailingConstraint = pinToTrailingConstraint
+
         self.addConstraints([
-            bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset),
+            pinToLeadingConstraint,
+            pinToTrailingConstraint,
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: Constants.BubbleTopOffset),
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: Constants.MaxBubbleWidthRatio)
         ])
@@ -47,8 +56,19 @@ final class ChatViewMessageCell: UICollectionViewCell, Reusable {
         ])
     }
 
+    private func set(backgroundColor: UIColor) {
+        let cornerRadius = (Constants.FontSize + Constants.TextInsets.top + Constants.TextInsets.bottom) / 2
+        bubbleView.image = UIImage.cornerRoundedImage(color: backgroundColor, cornerRadius: cornerRadius)
+    }
+
     func configure(with content: ChatViewMessageContent) {
         textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
+        set(backgroundColor: content.isCurrentSender ? UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1) : UIColor(white: 0.95, alpha: 1))
+        textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
+        pinToLeadingConstraint?.priority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
+        pinToTrailingConstraint?.priority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
+        self.setNeedsLayout()
+        self.layoutIfNeeded()
     }
 }
 

@@ -24,7 +24,8 @@ final class ChatViewModel {
 
                 return timer
                     .scan([ChatViewItem]()) { (accum, _) -> [ChatViewItem] in
-                        return accum + [ChatViewItem.message(ChatViewMessageContent(body: "1289A1"))]
+                        let isCurrentSender = arc4random_uniform(2) == 1
+                        return accum + [ChatViewItem.message(ChatViewMessageContent(body: "1289A1", isCurrentSender: isCurrentSender))]
                     }
             }
 
