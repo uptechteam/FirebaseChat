@@ -26,17 +26,32 @@
                         <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
                     </collectionViewFlowLayout>
                 </collectionView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mu9-iX-9Yo">
+                    <rect key="frame" x="315" y="607" width="50" height="50"/>
+                    <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="50" id="inr-7a-SSV"/>
+                        <constraint firstAttribute="height" constant="50" id="twf-Lw-X4t"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" pointSize="20"/>
+                    <state key="normal" title="T">
+                        <color key="titleColor" white="0.0" alpha="1" colorSpace="calibratedWhite"/>
+                    </state>
+                </button>
             </subviews>
             <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
             <constraints>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="6nC-3N-7sY" secondAttribute="bottom" id="PkG-W3-ZhC"/>
                 <constraint firstItem="6nC-3N-7sY" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" id="biX-YB-1cT"/>
                 <constraint firstItem="6nC-3N-7sY" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="cXa-u4-J4V"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="mu9-iX-9Yo" secondAttribute="trailing" constant="10" id="hcY-h5-Vgh"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="mu9-iX-9Yo" secondAttribute="bottom" constant="10" id="jun-Cf-WVX"/>
                 <constraint firstAttribute="trailing" secondItem="6nC-3N-7sY" secondAttribute="trailing" id="vzV-zl-NaV"/>
             </constraints>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <connections>
                 <outlet property="collectionView" destination="6nC-3N-7sY" id="gBI-WQ-cZe"/>
+                <outlet property="followBottomButton" destination="mu9-iX-9Yo" id="1b6-9r-2fc"/>
             </connections>
         </view>
     </objects>
