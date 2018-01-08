@@ -12,5 +12,6 @@ target 'UPTechChat' do
   pod 'RxCocoa', '~> 4.0'
   pod 'ObjectMapper', '~> 3.1'
   pod 'ReactiveCocoa', '~> 7.0'
+  pod 'Changeset', '~> 3.0'
 
 end

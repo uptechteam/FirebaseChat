@@ -3,7 +3,7 @@
 //  UPTechChat
 //
 //  Created by Evgeny Matviyenko on 1/4/18.
-//  Copyright © 2018 upteachteam. All rights reserved.
+//  Copyright © 2018 uptechteam. All rights reserved.
 //
 
 import UIKit

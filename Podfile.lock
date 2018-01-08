@@ -1,4 +1,5 @@
 PODS:
+  - Changeset (3.0)
   - Firebase/Core (4.5.0):
     - FirebaseAnalytics (= 4.0.4)
     - FirebaseCore (= 4.0.10)
@@ -39,6 +40,7 @@ PODS:
   - RxSwift (4.1.0)
 
 DEPENDENCIES:
+  - Changeset (~> 3.0)
   - Firebase/Core (~> 4.5.0)
   - Firebase/Database (~> 4.5.0)
   - ObjectMapper (~> 3.1)
@@ -47,6 +49,7 @@ DEPENDENCIES:
   - RxSwift (~> 4.0)
 
 SPEC CHECKSUMS:
+  Changeset: cbb84a74639049a7b96fc64851e8a9cfcc3c9989
   Firebase: d83d287bdb6b1c78320561482706d1fcfc8ddfc1
   FirebaseAnalytics: 722b53c7b32bfc7806b06e0093a2f5180d4f2c5a
   FirebaseCore: da5e8e372cb6046212739a4d81e42d32c22907cc
@@ -62,6 +65,6 @@ SPEC CHECKSUMS:
   RxCocoa: cc1fec49cdc8fabe645964de7c51c099a36c2aa8
   RxSwift: 4219941c1244c88002901bd87a69d3aea9ae71f0
 
-PODFILE CHECKSUM: 7accfad120b82a2db3ffd3b8d97a220d211bc9cb
+PODFILE CHECKSUM: 41afda6286fcad7a01cf190be5409b9a0bacb37e
 
 COCOAPODS: 1.3.1

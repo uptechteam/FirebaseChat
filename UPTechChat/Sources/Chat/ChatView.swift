@@ -3,23 +3,22 @@
 //  UPTechChat
 //
 //  Created by Евгений Матвиенко on 1/8/18.
-//  Copyright © 2018 upteachteam. All rights reserved.
+//  Copyright © 2018 uptechteam. All rights reserved.
 //
 
 import UIKit
 
 final class ChatView: UIView {
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setup()
-    }
+    @IBOutlet weak var collectionView: UICollectionView!
 
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+    private let dataSource = ChatDataSource()
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
         setup()
     }
 
     private func setup() {
-
+        dataSource.set(collectionView: collectionView)
     }
 }

@@ -14,6 +14,8 @@
 		6AB592D21FFE3B6C0056479A /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB592D11FFE3B6C0056479A /* Provider.swift */; };
 		6AE686EE2003762F00E5580B /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686ED2003762F00E5580B /* ChatView.swift */; };
 		6AE686F02003764600E5580B /* ChatView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6AE686EF2003764600E5580B /* ChatView.xib */; };
+		6AE686F22003780700E5580B /* ChatViewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686F12003780700E5580B /* ChatViewItem.swift */; };
+		6AE686F42003782400E5580B /* ChatDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE686F32003782400E5580B /* ChatDataSource.swift */; };
 		6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE86C981FFE312500DB7C47 /* AppDelegate.swift */; };
 		6AE86C9B1FFE312500DB7C47 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE86C9A1FFE312500DB7C47 /* ViewController.swift */; };
 		6AE86C9E1FFE312500DB7C47 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 6AE86C9C1FFE312500DB7C47 /* Main.storyboard */; };
@@ -31,6 +33,8 @@
 		6AB592D11FFE3B6C0056479A /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		6AE686ED2003762F00E5580B /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		6AE686EF2003764600E5580B /* ChatView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = ChatView.xib; sourceTree = "<group>"; };
+		6AE686F12003780700E5580B /* ChatViewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewItem.swift; sourceTree = "<group>"; };
+		6AE686F32003782400E5580B /* ChatDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDataSource.swift; sourceTree = "<group>"; };
 		6AE86C951FFE312500DB7C47 /* UPTechChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UPTechChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AE86C981FFE312500DB7C47 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		6AE86C9A1FFE312500DB7C47 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -91,6 +95,8 @@
 				6A7D9CF21FFE53D800ED398D /* ChatViewController.swift */,
 				6AE686ED2003762F00E5580B /* ChatView.swift */,
 				6AE686EF2003764600E5580B /* ChatView.xib */,
+				6AE686F12003780700E5580B /* ChatViewItem.swift */,
+				6AE686F32003782400E5580B /* ChatDataSource.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -167,7 +173,7 @@
 			attributes = {
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
-				ORGANIZATIONNAME = upteachteam;
+				ORGANIZATIONNAME = uptechteam;
 				TargetAttributes = {
 					6AE86C941FFE312500DB7C47 = {
 						CreatedOnToolsVersion = 9.2;
@@ -231,6 +237,7 @@
 			);
 			inputPaths = (
 				"${SRCROOT}/Pods/Target Support Files/Pods-UPTechChat/Pods-UPTechChat-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/Changeset/Changeset.framework",
 				"${BUILT_PRODUCTS_DIR}/GoogleToolboxForMac/GoogleToolboxForMac.framework",
 				"${BUILT_PRODUCTS_DIR}/ObjectMapper/ObjectMapper.framework",
 				"${BUILT_PRODUCTS_DIR}/ReactiveCocoa/ReactiveCocoa.framework",
@@ -243,6 +250,7 @@
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Changeset.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleToolboxForMac.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ObjectMapper.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactiveCocoa.framework",
@@ -287,10 +295,12 @@
 				6A7D9CF51FFE5AED00ED398D /* UIKit+Chat.swift in Sources */,
 				6AE86C9B1FFE312500DB7C47 /* ViewController.swift in Sources */,
 				6AB592D01FFE38B80056479A /* Models.swift in Sources */,
+				6AE686F42003782400E5580B /* ChatDataSource.swift in Sources */,
 				6AE686EE2003762F00E5580B /* ChatView.swift in Sources */,
 				6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */,
 				6A7D9CF31FFE53D800ED398D /* ChatViewController.swift in Sources */,
 				6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */,
+				6AE686F22003780700E5580B /* ChatViewItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
