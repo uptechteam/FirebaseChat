@@ -65,7 +65,7 @@ extension ViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
 
         let chatEntity = chatEntities[indexPath.row]
-        let chatViewController = ChatViewController(nibName: nil, bundle: nil)
+        let chatViewController = ChatViewController(viewModel: ChatViewModel())
         navigationController?.pushViewController(chatViewController, animated: true)
     }
 }

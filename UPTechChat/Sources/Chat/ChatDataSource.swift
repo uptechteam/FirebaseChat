@@ -14,6 +14,7 @@ final class ChatDataSource: NSObject {
     private weak var collectionView: UICollectionView?
 
     func set(collectionView: UICollectionView) {
+        collectionView.register(ChatViewMessageCell.self, forCellWithReuseIdentifier: ChatViewMessageCell.reuseIdentifier)
         collectionView.dataSource = self
         self.collectionView = collectionView
     }
@@ -35,6 +36,12 @@ extension ChatDataSource: UICollectionViewDataSource {
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        return UICollectionViewCell()
+        let item = items[indexPath.row]
+        switch item {
+        case .message(let content):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatViewMessageCell.reuseIdentifier, for: indexPath) as! ChatViewMessageCell
+            cell.configure(with: content)
+            return cell
+        }
     }
 }
