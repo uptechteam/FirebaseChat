@@ -23,7 +23,7 @@ final class ChatViewModel {
                 let timer = SignalProducer.timer(interval: .seconds(1), on: QueueScheduler.main)
 
                 return timer
-                    .scan([ChatViewItem]()) { (accum, _) -> [ChatViewItem] in
+                    .scan([ChatViewItem.loading]) { (accum, _) -> [ChatViewItem] in
                         let isCurrentSender = arc4random_uniform(2) == 1
                         return accum + [ChatViewItem.message(ChatViewMessageContent(body: "1289A1", isCurrentSender: isCurrentSender))]
                     }

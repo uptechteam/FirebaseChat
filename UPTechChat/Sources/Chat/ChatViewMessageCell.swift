@@ -85,5 +85,5 @@ private enum Constants {
     static let TextInsets = UIEdgeInsets(top: 8, left: 14, bottom: 8, right: 14)
     static let MaxBubbleWidthRatio: CGFloat = 0.7
     static let BubbleTopOffset: CGFloat = 1
-    static let BubbleSideOffset: CGFloat = 8
+    static let BubbleSideOffset: CGFloat = 12
 }

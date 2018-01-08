@@ -15,6 +15,7 @@ final class ChatDataSource: NSObject {
 
     func set(collectionView: UICollectionView) {
         collectionView.register(ChatViewMessageCell.self, forCellWithReuseIdentifier: ChatViewMessageCell.reuseIdentifier)
+        collectionView.register(ChatViewLoadingCell.self, forCellWithReuseIdentifier: ChatViewLoadingCell.reuseIdentifier)
         collectionView.dataSource = self
         self.collectionView = collectionView
     }
@@ -38,6 +39,10 @@ extension ChatDataSource: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let item = items[indexPath.row]
         switch item {
+        case .loading:
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatViewLoadingCell.reuseIdentifier, for: indexPath) as! ChatViewLoadingCell
+            cell.startAnimating()
+            return cell
         case .message(let content):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatViewMessageCell.reuseIdentifier, for: indexPath) as! ChatViewMessageCell
             cell.configure(with: content)

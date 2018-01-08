@@ -41,6 +41,8 @@ extension Reactive where Base: ChatView {
 extension ChatView: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         switch dataSource.items[indexPath.row] {
+        case .loading:
+            return CGSize(width: collectionView.frame.width, height: 40)
         case .message(let content):
             return CGSize(width: collectionView.frame.width, height: ChatViewMessageCell.preferredHeight(content: content, collectionViewFrame: collectionView.frame))
         }

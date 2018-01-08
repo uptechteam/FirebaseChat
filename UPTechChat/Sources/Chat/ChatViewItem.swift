@@ -21,14 +21,19 @@ extension ChatViewMessageContent: Equatable {
 }
 
 enum ChatViewItem {
+    case loading
     case message(ChatViewMessageContent)
 }
 
 extension ChatViewItem: Equatable {
     static func ==(lhs: ChatViewItem, rhs: ChatViewItem) -> Bool {
         switch (lhs, rhs) {
+        case (.loading, .loading):
+            return true
         case let (.message(lhsContent), .message(rhsContent)):
             return lhsContent == rhsContent
+        default:
+            return false
         }
     }
 }
