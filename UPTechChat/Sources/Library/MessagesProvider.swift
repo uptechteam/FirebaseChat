@@ -35,7 +35,7 @@ final class MessagesProvider {
         func loadMessageEntitiesOnce(limit: Int) -> Observable<[FirebaseEntity<Message>]> {
             let query = reference.queryOrdered(byChild: "date").queryLimited(toLast: UInt(limit))
             return Observable.create { observer in
-                let handle = query.observeSingleEvent(of: DataEventType.value, with: { (snapshot) in
+                query.observeSingleEvent(of: DataEventType.value, with: { (snapshot) in
                     guard let json = snapshot.value as? [String: Any] else {
                         observer.onNext([])
                         return
@@ -58,9 +58,7 @@ final class MessagesProvider {
                     observer.onError(error)
                 })
 
-                return Disposables.create {
-                    query.removeObserver(withHandle: handle)
-                }
+                return Disposables.create()
             }
         }
 
@@ -97,6 +95,8 @@ final class MessagesProvider {
                     })
                     .flatMapLatest(loadMessageEntitiesOnce)
             }
+
+        return .never()
     }
 
     func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> Observable<Void> {

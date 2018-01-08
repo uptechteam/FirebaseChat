@@ -23,7 +23,6 @@ PODS:
   - GoogleToolboxForMac/NSData+zlib (2.1.3):
     - GoogleToolboxForMac/Defines (= 2.1.3)
   - leveldb-library (1.20)
-  - MessageKit (0.10.2)
   - nanopb (0.3.8):
     - nanopb/decode (= 0.3.8)
     - nanopb/encode (= 0.3.8)
@@ -42,7 +41,6 @@ PODS:
 DEPENDENCIES:
   - Firebase/Core (~> 4.5.0)
   - Firebase/Database (~> 4.5.0)
-  - MessageKit (~> 0.10.0)
   - ObjectMapper (~> 3.1)
   - ReactiveCocoa (~> 7.0)
   - RxCocoa (~> 4.0)
@@ -56,7 +54,6 @@ SPEC CHECKSUMS:
   FirebaseInstanceID: 81df5805a08001e69138664bdd02c6719a9ac80f
   GoogleToolboxForMac: 2501e2ad72a52eb3dfe7bd9aee7dad11b858bd20
   leveldb-library: 08cba283675b7ed2d99629a4bc5fd052cd2bb6a5
-  MessageKit: 2642b9641290691650cfa2612ad672512799a71c
   nanopb: 5601e6bca2dbf1ed831b519092ec110f66982ca3
   ObjectMapper: 20505058f54e5c3ca69e1d6de9897d152a5369a6
   ReactiveCocoa: a1b5d502d0d1534f9a72981a485b297b17127f83
@@ -65,6 +62,6 @@ SPEC CHECKSUMS:
   RxCocoa: cc1fec49cdc8fabe645964de7c51c099a36c2aa8
   RxSwift: 4219941c1244c88002901bd87a69d3aea9ae71f0
 
-PODFILE CHECKSUM: 4fd8f865b4f16cd1dd99db6e6e5b9a73a77ab4fc
+PODFILE CHECKSUM: 7accfad120b82a2db3ffd3b8d97a220d211bc9cb
 
 COCOAPODS: 1.3.1
