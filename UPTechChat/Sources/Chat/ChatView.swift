@@ -15,11 +15,9 @@ final class ChatView: UIView {
         return collectionView.collectionViewLayout as! UICollectionViewFlowLayout
     }
 
-    @IBOutlet weak var followBottomButton: UIButton!
     @IBOutlet weak var collectionView: UICollectionView!
 
     fileprivate let dataSource = ChatDataSource()
-    fileprivate let isFollowingEnd = MutableProperty<Bool>(true)
 
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -27,32 +25,9 @@ final class ChatView: UIView {
     }
 
     private func setup() {
+        collectionView.transform = CGAffineTransform(scaleX: -1, y: -1)
         collectionView.delegate = self
         dataSource.set(collectionView: collectionView)
-
-        isFollowingEnd <~ collectionView.reactive.signal(forKeyPath: #keyPath(UIScrollView.contentOffset))
-            .take(during: self.reactive.lifetime)
-            .filterMap { $0 as? CGPoint }
-            .map { [unowned self] point in
-                return point.y + 40 > (self.collectionView.contentSize.height - self.collectionView.frame.height)
-            }
-
-        followBottomButton.reactive.isHidden <~ isFollowingEnd
-
-        isFollowingEnd <~ followBottomButton.reactive.controlEvents(UIControlEvents.touchUpInside)
-            .map { _ in true }
-
-        isFollowingEnd.signal
-            .take(during: self.reactive.lifetime)
-            .combinePrevious()
-            .filter { !$0.0 && $0.1 }
-            .observeValues { [unowned self] _ in self.scrollToBottomIfNeeded() }
-    }
-
-    fileprivate func scrollToBottomIfNeeded() {
-        if isFollowingEnd.value && dataSource.items.count > 0 {
-            collectionView.scrollToItem(at: IndexPath(row: dataSource.items.count - 1, section: 0), at: UICollectionViewScrollPosition.centeredVertically, animated: true)
-        }
     }
 }
 
@@ -60,9 +35,9 @@ extension Reactive where Base: ChatView {
     func loadItems(_ items: Property<[ChatViewItem]>) {
         items.producer
             .take(during: base.reactive.lifetime)
+            .map { Array($0.reversed()) }
             .startWithValues { [unowned base] items in
                 base.dataSource.load(items: items)
-                base.scrollToBottomIfNeeded()
             }
     }
 }
@@ -88,6 +63,6 @@ extension ChatView: UICollectionViewDelegateFlowLayout {
     }
 
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
-        return UIEdgeInsets(top: 0, left: 0, bottom: 8, right: 0)
+        return UIEdgeInsets(top: 8, left: 0, bottom: 0, right: 0)
     }
 }

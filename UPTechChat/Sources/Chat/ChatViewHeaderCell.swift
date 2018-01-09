@@ -8,7 +8,7 @@
 
 import UIKit
 
-final class ChatViewHeaderCell: UICollectionViewCell, Reusable {
+final class ChatViewHeaderCell: ChatViewCell, Reusable {
     private let textLabel = UILabel()
 
     override init(frame: CGRect) {

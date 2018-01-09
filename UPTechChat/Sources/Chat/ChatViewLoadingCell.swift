@@ -8,7 +8,7 @@
 
 import UIKit
 
-final class ChatViewLoadingCell: UICollectionViewCell, Reusable {
+final class ChatViewLoadingCell: ChatViewCell, Reusable {
     private let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
 
     override init(frame: CGRect) {

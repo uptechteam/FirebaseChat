@@ -8,7 +8,7 @@
 
 import UIKit
 
-final class ChatViewMessageCell: UICollectionViewCell, Reusable {
+final class ChatViewMessageCell: ChatViewCell, Reusable {
     static let textAttributes: [NSAttributedStringKey: Any] = [
         NSAttributedStringKey.font: UIFont.systemFont(ofSize: Constants.FontSize)
     ]
