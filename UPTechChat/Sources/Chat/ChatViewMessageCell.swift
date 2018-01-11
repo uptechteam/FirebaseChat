@@ -51,7 +51,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: Constants.MaxBubbleWidthRatio)
         ])
 
-        titleLabel.textColor = UIColor(red: 21 / 255, green: 152 / 255, blue: 133 / 255, alpha: 1)
+        titleLabel.textColor = UIColor(red: 253 / 255, green: 145 / 255, blue: 80 / 255, alpha: 1)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.numberOfLines = 1
         titleLabel.attributedText = NSAttributedString(string: "Evgeny Matviyenko", attributes: ChatViewMessageCell.titleAttributes)
@@ -59,6 +59,8 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         textLabel.translatesAutoresizingMaskIntoConstraints = false
         textLabel.numberOfLines = 0
 
+        stackView.addArrangedSubview(titleLabel)
+        stackView.addArrangedSubview(textLabel)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
         bubbleView.addSubview(stackView)
@@ -93,10 +95,14 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     }
 
     func configure(with content: ChatViewMessageContent) {
-        set(backgroundColor: content.isCurrentSender ? UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1) : UIColor(white: 0.95, alpha: 1))
+        let currentSenderColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
+        let otherSenderColor = UIColor(red: 229 / 255, green: 229 / 255, blue: 234 / 255, alpha: 1)
+        set(backgroundColor: content.isCurrentSender ? currentSenderColor : otherSenderColor)
 
         textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
         textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
+
+        titleLabel.attributedText = NSAttributedString(string: content.title ?? "", attributes: ChatViewMessageCell.titleAttributes)
 
         crookView.isHidden = !content.isCrooked
         crookView.pointsToRight = content.isCurrentSender
@@ -109,13 +115,6 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
         self.setNeedsLayout()
         self.layoutIfNeeded()
-
-        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        if let title = content.title {
-            titleLabel.attributedText = NSAttributedString(string: title, attributes: ChatViewMessageCell.titleAttributes)
-            stackView.addArrangedSubview(titleLabel)
-        }
-        stackView.addArrangedSubview(textLabel)
     }
 }
 

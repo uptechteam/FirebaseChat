@@ -40,8 +40,8 @@ final class ChatView: UIView {
         tapGestureRecognizer.reactive.stateChanged
             .take(duringLifetimeOf: self.reactive.lifetime)
             .filter { $0.state == .recognized }
-            .observeValues { [unowned self] _ in
-                self.endEditing(false)
+            .observeValues { [weak self] _ in
+                self?.endEditing(false)
             }
 
         let keyboardWillHide = NotificationCenter.default.reactive.notifications(forName: Notification.Name.UIKeyboardWillHide)
@@ -52,7 +52,7 @@ final class ChatView: UIView {
             keyboardWillHide.map { ($0, false) }
         ])
             .take(duringLifetimeOf: self.reactive.lifetime)
-            .observeValues { [unowned self] (notification, isShow) in
+            .observeValues { [weak self] (notification, isShow) in
                 let userInfo = notification.userInfo!
                 let animationCurve = UIViewAnimationCurve(rawValue: (userInfo[UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue)!
                 let animationDuration = userInfo[UIKeyboardAnimationDurationUserInfoKey] as! Double
@@ -61,7 +61,7 @@ final class ChatView: UIView {
                 UIView.beginAnimations(nil, context: nil)
                 UIView.setAnimationCurve(animationCurve)
                 UIView.setAnimationDuration(animationDuration)
-                self.updateContentInset(keyboardHeight: isShow ? keyboardFrame.height : 0)
+                self?.updateContentInset(keyboardHeight: isShow ? keyboardFrame.height : 0)
                 UIView.commitAnimations()
             }
     }
@@ -85,13 +85,21 @@ extension Reactive where Base: ChatView {
         return base.chatInputView.reactive.sendButtonTap
     }
 
-    func loadItems(_ items: Property<[ChatViewItem]>) {
-        items.producer
-            .take(during: base.reactive.lifetime)
-            .map { Array($0.reversed()) }
-            .startWithValues { [unowned base] items in
-                base.dataSource.load(items: items)
+    var scrolledToTop: Signal<Void, NoError> {
+        return base.collectionView.reactive.signal(forKeyPath: #keyPath(UIScrollView.contentOffset))
+            .filterMap { $0 as? CGPoint }
+            .filter { [weak base] point -> Bool in
+                guard let base = base else { return false }
+                let delta = base.collectionView.contentSize.height - point.y - base.collectionView.frame.height
+                return delta < 200
             }
+            .map { _ in () }
+    }
+
+    var items: BindingTarget<[ChatViewItem]> {
+        return BindingTarget(on: QueueScheduler.messages, lifetime: self.lifetime) { [weak base] items in
+            base?.dataSource.load(items: items)
+        }
     }
 
     var clearInputText: BindingTarget<Void> {
@@ -103,7 +111,7 @@ extension ChatView: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         switch dataSource.items[indexPath.row] {
         case .loading:
-            return CGSize(width: collectionView.frame.width, height: 40)
+            return CGSize(width: collectionView.frame.width, height: 60)
         case .header:
             return CGSize(width: collectionView.frame.width, height: 40)
         case .message(let content):

@@ -25,7 +25,7 @@ final class ChatViewLoadingCell: ChatViewCell, Reusable {
         contentView.addSubview(activityIndicator)
         self.addConstraints([
             activityIndicator.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+            activityIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: 8)
         ])
     }
 

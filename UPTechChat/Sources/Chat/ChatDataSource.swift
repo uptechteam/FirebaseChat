@@ -22,9 +22,13 @@ final class ChatDataSource: NSObject {
     }
 
     func load(items: [ChatViewItem]) {
-        let changes = Changeset.edits(from: self.items, to: items)
-        self.items = items
-        collectionView?.update(with: changes)
+        let reversedItems = Array(items.reversed())
+        let changes = Changeset.edits(from: self.items, to: reversedItems)
+        self.items = reversedItems
+
+        DispatchQueue.main.async {
+            self.collectionView?.update(with: changes)
+        }
     }
 }
 

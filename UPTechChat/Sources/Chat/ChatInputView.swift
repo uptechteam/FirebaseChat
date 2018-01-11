@@ -94,8 +94,8 @@ extension Reactive where Base: ChatInputView {
     }
 
     var clearInputText: BindingTarget<Void> {
-        return BindingTarget(on: QueueScheduler.main, lifetime: self.lifetime) { [unowned base] in
-            base.textField.text = ""
+        return BindingTarget(on: QueueScheduler.main, lifetime: self.lifetime) { [weak base] in
+            base?.textField.text = ""
         }
     }
 }

@@ -22,10 +22,12 @@ final class ChatViewModel {
 
     let inputTextChangesObserver: Signal<String, NoError>.Observer
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
+    let scrolledToTopObserver: Signal<Void, NoError>.Observer
 
-    init(messagesProvider: MessagesProvider, userProvider: UserProvider, chatEntity: FirebaseEntity<Chat>) {
+    init(messagesProvider: MessagesProvider, userProvider: UserProvider, scheduler: QueueScheduler = .messages, chatEntity: FirebaseEntity<Chat>) {
         let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
+        let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
 
         let (_clearInputText, _clearInputTextObserver) = Signal<Void, NoError>.pipe()
         let inputText = Property<String>(
@@ -38,13 +40,14 @@ final class ChatViewModel {
 
         let currentUser = userProvider.currentUser
 
-        let messages = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: Signal<Void, NoError>.never)
-        let items = messages
-            .combineLatest(with: currentUser)
-            .map { (messages, currentUser) -> [ChatViewItem] in
+        let messagesResult = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
+
+        let itemsProducer = Property.combineLatest(messagesResult.messages, currentUser, messagesResult.isLoadingMore).producer
+            .observe(on: scheduler)
+            .map { (messages, currentUser, isLoadingMore) -> [ChatViewItem] in
                 let splittedMessages = splitMessages(messages)
 
-                let items = splittedMessages.flatMap { dateGroup -> [ChatViewItem] in
+                let messageItems = splittedMessages.flatMap { dateGroup -> [ChatViewItem] in
                     let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [ChatViewItem] in
                         return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> ChatViewItem in
                             let isCurrentSender = message.model.sender == currentUser
@@ -64,8 +67,11 @@ final class ChatViewModel {
                     return [headerItem] + messageItems
                 }
 
-                return items
+                let loadingItem: [ChatViewItem] = isLoadingMore ? [ChatViewItem.loading] : []
+
+                return loadingItem + messageItems
             }
+            .debounce(0.2, on: scheduler)
 
         let clearInputText = inputText.signal
             .sample(on: sendButtonTap)
@@ -79,10 +85,11 @@ final class ChatViewModel {
             }
             .on(value: _clearInputTextObserver.send)
 
-        self.items = items
+        self.items = Property(initial: [], then: itemsProducer)
         self.clearInputText = clearInputText
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver
+        self.scrolledToTopObserver = scrolledToTopObserver
     }
 }
 
