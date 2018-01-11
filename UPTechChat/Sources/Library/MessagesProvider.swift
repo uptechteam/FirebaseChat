@@ -12,7 +12,7 @@ import ObjectMapper
 import ReactiveSwift
 import Result
 
-private let DefaultMessagesBatchCount = 20
+private let DefaultMessagesBatchCount = 40
 
 enum MessagesProviderError: Swift.Error {
     case wrapped(Swift.Error)

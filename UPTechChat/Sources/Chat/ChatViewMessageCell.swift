@@ -22,6 +22,9 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private let stackView = UIStackView()
     private var pinToLeadingConstraint: NSLayoutConstraint?
     private var pinToTrailingConstraint: NSLayoutConstraint?
+    private let crookView = CrookView()
+    private var crookViewPinToLeadingConstraint: NSLayoutConstraint?
+    private var crookViewPinToTrailingConstraint: NSLayoutConstraint?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -35,14 +38,12 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private func setup() {
         bubbleView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bubbleView)
-
         let pinToLeadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset)
         pinToLeadingConstraint.priority = UILayoutPriority.defaultLow
         self.pinToLeadingConstraint = pinToLeadingConstraint
         let pinToTrailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
         pinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
         self.pinToTrailingConstraint = pinToTrailingConstraint
-
         self.addConstraints([
             pinToLeadingConstraint,
             pinToTrailingConstraint,
@@ -67,11 +68,28 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             stackView.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: Constants.BubbleInsets.top),
             stackView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -Constants.BubbleInsets.bottom)
         ])
+
+        crookView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.insertSubview(crookView, at: 0)
+        let crookViewPinToLeadingConstraint = crookView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: -9)
+        crookViewPinToLeadingConstraint.priority = UILayoutPriority.defaultLow
+        self.crookViewPinToLeadingConstraint = crookViewPinToLeadingConstraint
+        let crookViewPinToTrailingConstraint = crookView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: 9)
+        crookViewPinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
+        self.crookViewPinToTrailingConstraint = crookViewPinToTrailingConstraint
+        self.addConstraints([
+            crookView.widthAnchor.constraint(equalToConstant: 20),
+            crookView.heightAnchor.constraint(equalToConstant: 16),
+            crookViewPinToLeadingConstraint,
+            crookViewPinToTrailingConstraint,
+            crookView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: 0)
+        ])
     }
 
     private func set(backgroundColor: UIColor) {
         let cornerRadius = (Constants.FontSize + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom) / 2
         bubbleView.image = UIImage.cornerRoundedImage(color: backgroundColor, cornerRadius: cornerRadius)
+        crookView.color = backgroundColor
     }
 
     func configure(with content: ChatViewMessageContent) {
@@ -80,8 +98,15 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
         textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
 
-        pinToLeadingConstraint?.priority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
-        pinToTrailingConstraint?.priority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
+        crookView.isHidden = !content.isCrooked
+        crookView.pointsToRight = content.isCurrentSender
+
+        let pinToLeadingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
+        pinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
+        crookViewPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
+        let pinToTrailingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
+        pinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
+        crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
         self.setNeedsLayout()
         self.layoutIfNeeded()
 
@@ -120,4 +145,42 @@ private enum Constants {
     static let MaxBubbleWidthRatio: CGFloat = 0.7
     static let BubbleTopOffset: CGFloat = 1
     static let BubbleSideOffset: CGFloat = 12
+}
+
+private class CrookView: UIView {
+    var color = UIColor.black {
+        didSet {
+            setNeedsDisplay()
+        }
+    }
+
+    var pointsToRight = true {
+        didSet {
+            setNeedsDisplay()
+        }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError()
+    }
+
+    override func draw(_ rect: CGRect) {
+        let bezierPath = UIBezierPath()
+        bezierPath.move(to: CGPoint(x: 0, y: 0))
+        bezierPath.addQuadCurve(to: CGPoint(x: rect.width, y: rect.height), controlPoint: CGPoint(x: 0, y: rect.height))
+        bezierPath.addQuadCurve(to: CGPoint(x: rect.width / 2, y: 0), controlPoint: CGPoint(x: rect.width / 2, y: rect.height))
+        bezierPath.close()
+
+        if !pointsToRight {
+            bezierPath.apply(CGAffineTransform(scaleX: -1, y: 1).translatedBy(x: -rect.width, y: 0))
+        }
+
+        color.setFill()
+        bezierPath.fill()
+    }
 }

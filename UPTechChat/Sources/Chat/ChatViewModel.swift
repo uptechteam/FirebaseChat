@@ -42,22 +42,28 @@ final class ChatViewModel {
         let items = messages
             .combineLatest(with: currentUser)
             .map { (messages, currentUser) -> [ChatViewItem] in
-                var items = [ChatViewItem]()
-                for index in (0..<messages.count) {
-                    let previousMessage: FirebaseEntity<Message>? = index > 0 ? messages[index - 1] : nil
-                    let message = messages[index]
+                let splittedMessages = splitMessages(messages)
 
-                    if (previousMessage.map { message.model.date.timeIntervalSince($0.model.date) > 300 } ?? true) {
-                        items.append(.header(dateFormatter.string(from: message.model.date)))
+                let items = splittedMessages.flatMap { dateGroup -> [ChatViewItem] in
+                    let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [ChatViewItem] in
+                        return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> ChatViewItem in
+                            let isCurrentSender = message.model.sender == currentUser
+                            let content = ChatViewMessageContent(
+                                title: !isCurrentSender && senderGroupIndex == 0 ? message.model.sender.name : nil,
+                                body: message.model.body,
+                                isCurrentSender: isCurrentSender,
+                                isCrooked: senderGroupIndex == senderGroup.messages.count - 1
+                            )
+
+                            return .message(content)
+                        }
                     }
 
-                    let body = message.model.body
-                    let isCurrentSender = message.model.sender == currentUser
-                    let shouldShowTitle = !isCurrentSender && previousMessage?.model.sender != message.model.sender
-                    let title: String? = shouldShowTitle ? message.model.sender.name : nil
-                    let content = ChatViewMessageContent(title: title, body: body, isCurrentSender: isCurrentSender)
-                    items.append(ChatViewItem.message(content))
+                    let headerItem = ChatViewItem.header(dateFormatter.string(from: dateGroup.date))
+
+                    return [headerItem] + messageItems
                 }
+
                 return items
             }
 
@@ -78,4 +84,45 @@ final class ChatViewModel {
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver
     }
+}
+
+private struct DateGroup {
+    let date: Date
+    var senderGroups: [SenderGroup]
+}
+
+private struct SenderGroup {
+    let sender: User
+    var messages: [FirebaseEntity<Message>]
+}
+
+private func splitMessages(_ messages: [FirebaseEntity<Message>]) -> [DateGroup] {
+    var dateGroups = [DateGroup]()
+    messages.forEach { (message) in
+        if let previousMessage = dateGroups.last?.senderGroups.last?.messages.last {
+            if message.model.date.timeIntervalSince(previousMessage.model.date) > 300 {
+                let newDateGroup = DateGroup(date: message.model.date, senderGroups: [SenderGroup(sender: message.model.sender, messages: [message])])
+                dateGroups.append(newDateGroup)
+            } else {
+                var senderGroups = dateGroups[dateGroups.count - 1].senderGroups
+                if previousMessage.model.sender != message.model.sender {
+                    let newGroup = SenderGroup(sender: message.model.sender, messages: [message])
+                    senderGroups.append(newGroup)
+                } else {
+                    senderGroups[senderGroups.count - 1].messages.append(message)
+                }
+                dateGroups[dateGroups.count - 1].senderGroups = senderGroups
+            }
+        } else {
+            dateGroups = [DateGroup(
+                date: message.model.date,
+                senderGroups: [SenderGroup(
+                    sender: message.model.sender,
+                    messages: [message]
+                )]
+            )]
+        }
+    }
+
+    return dateGroups
 }
