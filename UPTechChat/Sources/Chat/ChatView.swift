@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import Result
 import ReactiveCocoa
 import ReactiveSwift
 
@@ -76,6 +77,14 @@ final class ChatView: UIView {
 }
 
 extension Reactive where Base: ChatView {
+    var inputTextChanges: Signal<String, NoError> {
+        return base.chatInputView.reactive.inputTextChanges
+    }
+
+    var sendButtonTap: Signal<Void, NoError> {
+        return base.chatInputView.reactive.sendButtonTap
+    }
+
     func loadItems(_ items: Property<[ChatViewItem]>) {
         items.producer
             .take(during: base.reactive.lifetime)
@@ -83,6 +92,10 @@ extension Reactive where Base: ChatView {
             .startWithValues { [unowned base] items in
                 base.dataSource.load(items: items)
             }
+    }
+
+    var clearInputText: BindingTarget<Void> {
+        return base.chatInputView.reactive.clearInputText
     }
 }
 

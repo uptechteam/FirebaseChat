@@ -12,27 +12,47 @@ import Result
 
 final class ChatViewModel {
     let items: Property<[ChatViewItem]>
+    let clearInputText: Signal<Void, NoError>
 
-    let viewWillAppear: Signal<Void, NoError>.Observer
+    let inputTextChangesObserver: Signal<String, NoError>.Observer
+    let sendButtonTapObserver: Signal<Void, NoError>.Observer
 
-    init() {
-        let (viewWillAppear, viewWillAppearObserver) = Signal<Void, NoError>.pipe()
+    init(messagesProvider: MessagesProvider, chatEntity: FirebaseEntity<Chat>) {
+        let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
+        let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
 
-        let itemsFlow = viewWillAppear
-            .flatMap(.latest) { () -> SignalProducer<[ChatViewItem], NoError> in
-                let timer = SignalProducer.timer(interval: .seconds(5), on: QueueScheduler.main)
+        let (_clearInputText, _clearInputTextObserver) = Signal<Void, NoError>.pipe()
+        let inputText = Property<String>(
+            initial: "",
+            then: Signal.merge([
+                inputTextChanges,
+                _clearInputText.map { _ in "" }
+            ])
+        )
 
-                return timer
-                    .scan([ChatViewItem.loading]) { (accum, _) -> [ChatViewItem] in
-                        let isCurrentSender = arc4random_uniform(2) == 1
-                        let array = Array<ChatViewItem>(repeating: ChatViewItem.message(ChatViewMessageContent(body: "Hello world!", isCurrentSender: isCurrentSender)), count: 1)
-                        return accum + [ChatViewItem.header("Monday, 12:00AM")] + array
-                    }
+        let messages = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: Signal<Void, NoError>.never)
+        let items = messages
+            .map { messages -> [ChatViewItem] in
+                return messages.map { message in
+                    let content = ChatViewMessageContent(body: message.model.body, isCurrentSender: false)
+                    return ChatViewItem.message(content)
+                }
             }
 
-        let items = Property<[ChatViewItem]>(initial: [], then: itemsFlow)
+        let clearInputText = inputText.signal
+            .sample(on: sendButtonTap)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .flatMap(.latest) { (text) -> SignalProducer<Void, NoError> in
+                let message = Message(body: text, date: Date())
+                return messagesProvider.post(message: message, to: chatEntity)
+                    .flatMapError { _ in SignalProducer<Void, NoError>.empty }
+            }
+            .on(value: _clearInputTextObserver.send)
 
         self.items = items
-        self.viewWillAppear = viewWillAppearObserver
+        self.clearInputText = clearInputText
+        self.inputTextChangesObserver = inputTextChangesObserver
+        self.sendButtonTapObserver = sendButtonTapObserver
     }
 }

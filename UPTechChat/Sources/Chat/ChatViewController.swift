@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import ReactiveSwift
 import ReactiveCocoa
 
 final class ChatViewController: UIViewController {
@@ -41,10 +42,15 @@ final class ChatViewController: UIViewController {
     }
 
     private func bindViewModel() {
-        self.reactive.trigger(for: #selector(UIViewController.viewWillAppear))
-            .take(during: self.reactive.lifetime)
-            .observe(viewModel.viewWillAppear)
-
         chatView.reactive.loadItems(viewModel.items)
+
+        chatView.reactive.clearInputText <~ viewModel.clearInputText
+
+        chatView.reactive.inputTextChanges
+            .logEvents()
+            .observe(viewModel.inputTextChangesObserver)
+
+        chatView.reactive.sendButtonTap
+            .observe(viewModel.sendButtonTapObserver)
     }
 }

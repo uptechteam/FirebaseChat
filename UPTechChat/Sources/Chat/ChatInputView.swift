@@ -7,8 +7,14 @@
 //
 
 import UIKit
+import Result
+import ReactiveSwift
+import ReactiveCocoa
 
 final class ChatInputView: UIView {
+    fileprivate let textField = UITextField()
+    fileprivate let sendButton = UIButton()
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
@@ -20,6 +26,8 @@ final class ChatInputView: UIView {
     }
 
     private func setup() {
+        let tintColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
+
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         containerView.layer.cornerRadius = 20
@@ -34,10 +42,10 @@ final class ChatInputView: UIView {
             containerView.heightAnchor.constraint(equalToConstant: 40)
         ])
 
-        let textField = UITextField()
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.placeholder = "Text Message"
         textField.font = UIFont.systemFont(ofSize: 18)
+        textField.tintColor = tintColor
         containerView.addSubview(textField)
         containerView.addConstraints([
             textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
@@ -45,14 +53,12 @@ final class ChatInputView: UIView {
             textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
         ])
 
-        let sendButton = UIButton()
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         sendButton.setTitle("S", for: .normal)
         sendButton.setTitleColor(UIColor.white, for: .normal)
-        sendButton.backgroundColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
+        sendButton.setBackgroundImage(UIImage.cornerRoundedImage(color: tintColor, cornerRadius: 16), for: .normal)
+        sendButton.setBackgroundImage(UIImage.cornerRoundedImage(color: tintColor.withAlphaComponent(0.7), cornerRadius: 16), for: .focused)
         sendButton.titleLabel?.font = UIFont.systemFont(ofSize: 20)
-        sendButton.clipsToBounds = true
-        sendButton.layer.cornerRadius = 16
         containerView.addSubview(sendButton)
         containerView.addConstraints([
             sendButton.widthAnchor.constraint(equalToConstant: 32),
@@ -61,5 +67,23 @@ final class ChatInputView: UIView {
             sendButton.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -4),
             sendButton.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4)
         ])
+    }
+}
+
+extension Reactive where Base: ChatInputView {
+    var inputTextChanges: Signal<String, NoError> {
+        return base.textField.reactive.continuousTextValues
+            .filterMap { $0 }
+    }
+
+    var sendButtonTap: Signal<Void, NoError> {
+        return base.sendButton.reactive.controlEvents(.touchUpInside)
+            .map { _ in () }
+    }
+
+    var clearInputText: BindingTarget<Void> {
+        return BindingTarget(on: QueueScheduler.main, lifetime: self.lifetime) { [unowned base] in
+            base.textField.text = ""
+        }
     }
 }

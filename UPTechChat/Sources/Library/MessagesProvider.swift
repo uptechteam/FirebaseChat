@@ -8,13 +8,14 @@
 
 import Foundation
 import FirebaseDatabase
-import RxSwift
 import ObjectMapper
+import ReactiveSwift
+import Result
 
 private let DefaultMessagesBatchCount = 5
 
-struct MessagesResult {
-    let entities: Observable<[FirebaseEntity<Message>]>
+enum MessagesProviderError: Swift.Error {
+    case wrapped(Swift.Error)
 }
 
 final class MessagesProvider {
@@ -26,18 +27,22 @@ final class MessagesProvider {
 
     func fetchMessageEntities(
         chatEntity: FirebaseEntity<Chat>,
-        reloadMessages: Observable<Void>,
-        loadMoreMessages: Observable<Void>
-        ) -> Observable<[FirebaseEntity<Message>]> {
+        loadMoreMessages: Signal<Void, NoError>
+        ) -> Property<[FirebaseEntity<Message>]> {
 
         let reference = database.reference(withPath: "messages/\(chatEntity.identifier)")
 
-        func loadMessageEntitiesOnce(limit: Int) -> Observable<[FirebaseEntity<Message>]> {
-            let query = reference.queryOrdered(byChild: "date").queryLimited(toLast: UInt(limit))
-            return Observable.create { observer in
+        func loadMessageEntitiesOnce(limit: Int, cursor: FirebaseEntity<Message>) -> SignalProducer<[FirebaseEntity<Message>], MessagesProviderError> {
+            let query = reference
+                .queryOrdered(byChild: "date")
+                .queryEnding(atValue: cursor.model.date.timeIntervalSince1970, childKey: "date")
+                .queryLimited(toLast: UInt(limit))
+
+            return SignalProducer { (observer: Signal<[FirebaseEntity<Message>], MessagesProviderError>.Observer, _: Lifetime) in
                 query.observeSingleEvent(of: DataEventType.value, with: { (snapshot) in
                     guard let json = snapshot.value as? [String: Any] else {
-                        observer.onNext([])
+                        observer.send(value: [])
+                        observer.sendCompleted()
                         return
                     }
 
@@ -50,70 +55,64 @@ final class MessagesProvider {
                             }
                             .sorted(by: { $0.model.date < $1.model.date })
 
-                        observer.onNext(entities)
+                        observer.send(value: entities)
+                        observer.sendCompleted()
                     } catch {
-                        observer.onError(error)
+                        observer.send(error: .wrapped(error))
                     }
                 }, withCancel: { (error) in
-                    observer.onError(error)
+                    observer.send(error: .wrapped(error))
                 })
-
-                return Disposables.create()
             }
         }
 
-        let newMessages = Observable<FirebaseEntity<Message>>.create { observer in
-            let handle = reference.observe(DataEventType.childAdded) { (snapshot) in
+        let newMessages = Signal<FirebaseEntity<Message>, MessagesProviderError> { (observer, lifetime) in
+            let query = reference
+                .queryOrdered(byChild: "date")
+                .queryLimited(toLast: UInt(DefaultMessagesBatchCount))
+
+            let handle = query.observe(.childAdded) { (snapshot) in
                 guard let rawMessage = snapshot.value as? [String: Any] else {
                     return
                 }
 
                 do {
                     let model: Message = try Mapper<Message>().map(JSON: rawMessage)
-                    observer.onNext(FirebaseEntity(identifier: snapshot.key, model: model))
+                    observer.send(value: FirebaseEntity(identifier: snapshot.key, model: model))
                 } catch {
-                    observer.onError(error)
+                    observer.send(error: .wrapped(error))
                 }
             }
 
-            return Disposables.create {
+            lifetime.observeEnded {
                 reference.removeObserver(withHandle: handle)
             }
         }
 
-        let staticMessages = reloadMessages
-            .flatMapLatest { () -> Observable<[FirebaseEntity<Message>]> in
-                let initialMessages = loadMessageEntitiesOnce(limit: DefaultMessagesBatchCount)
-
-                initialMessages
-                    
-
-                return loadMoreMessages
-                    .startWith(())
-                    .scan(0, accumulator: { (accum: Int, _: Void) -> Int in
-                        return accum + DefaultMessagesBatchCount
-                    })
-                    .flatMapLatest(loadMessageEntitiesOnce)
+        let messages = newMessages
+            .scan([FirebaseEntity<Message>]()) { (accum, messageEntity) in
+                return (accum + [messageEntity]).sorted(by: { $0.model.date < $1.model.date })
             }
+            .flatMapError { _ in SignalProducer<[FirebaseEntity<Message>], NoError>.empty }
 
-        return .never()
+        let messagesProperty = Property(initial: [], then: messages)
+
+        return messagesProperty
     }
 
-    func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> Observable<Void> {
-        let reference = database.reference(withPath: "messages/\(chatEntity.identifier)")
-        return Observable.create { observer in
+    func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, MessagesProviderError> {
+        let reference = self.database.reference(withPath: "messages/\(chatEntity.identifier)")
+        return SignalProducer { observer, lifetime in
             let mapper = Mapper<Message>()
             let json = mapper.toJSON(message)
-            reference.childByAutoId().setValue(json, withCompletionBlock: { (error, _) in
+            reference.childByAutoId().setValue(json) { (error, reference) in
                 if let error = error {
-                    observer.onError(error)
+                    observer.send(error: .wrapped(error))
                 } else {
-                    observer.onNext(())
-                    observer.onCompleted()
+                    observer.send(value: ())
+                    observer.sendCompleted()
                 }
-            })
-
-            return Disposables.create()
+            }
         }
     }
 }
