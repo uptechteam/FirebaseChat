@@ -20,12 +20,13 @@ final class ChatViewModel {
 
         let itemsFlow = viewWillAppear
             .flatMap(.latest) { () -> SignalProducer<[ChatViewItem], NoError> in
-                let timer = SignalProducer.timer(interval: .seconds(1), on: QueueScheduler.main)
+                let timer = SignalProducer.timer(interval: .seconds(5), on: QueueScheduler.main)
 
                 return timer
                     .scan([ChatViewItem.loading]) { (accum, _) -> [ChatViewItem] in
                         let isCurrentSender = arc4random_uniform(2) == 1
-                        return accum + [ChatViewItem.header("Monday, 12:00AM")] + [ChatViewItem.message(ChatViewMessageContent(body: "1289A1", isCurrentSender: isCurrentSender))]
+                        let array = Array<ChatViewItem>(repeating: ChatViewItem.message(ChatViewMessageContent(body: "Hello world!", isCurrentSender: isCurrentSender)), count: 1)
+                        return accum + [ChatViewItem.header("Monday, 12:00AM")] + array
                     }
             }
 

@@ -35,6 +35,11 @@ final class ChatViewController: UIViewController {
         bindViewModel()
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        chatView.endEditing(false)
+    }
+
     private func bindViewModel() {
         self.reactive.trigger(for: #selector(UIViewController.viewWillAppear))
             .take(during: self.reactive.lifetime)

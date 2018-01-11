@@ -14,8 +14,9 @@ final class ChatView: UIView {
     var collectionViewLayout: UICollectionViewFlowLayout {
         return collectionView.collectionViewLayout as! UICollectionViewFlowLayout
     }
-
     @IBOutlet weak var collectionView: UICollectionView!
+    @IBOutlet weak var chatInputView: ChatInputView!
+    @IBOutlet weak var chatInputViewBottomConstraint: NSLayoutConstraint!
 
     fileprivate let dataSource = ChatDataSource()
 
@@ -27,7 +28,50 @@ final class ChatView: UIView {
     private func setup() {
         collectionView.transform = CGAffineTransform(scaleX: -1, y: -1)
         collectionView.delegate = self
+        collectionView.alwaysBounceVertical = true
+        collectionView.keyboardDismissMode = .none
+        collectionView.showsVerticalScrollIndicator = false
         dataSource.set(collectionView: collectionView)
+        updateContentInset(keyboardHeight: 0)
+
+        let tapGestureRecognizer = UITapGestureRecognizer()
+        collectionView.addGestureRecognizer(tapGestureRecognizer)
+        tapGestureRecognizer.reactive.stateChanged
+            .take(duringLifetimeOf: self.reactive.lifetime)
+            .filter { $0.state == .recognized }
+            .observeValues { [unowned self] _ in
+                self.endEditing(false)
+            }
+
+        let keyboardWillHide = NotificationCenter.default.reactive.notifications(forName: Notification.Name.UIKeyboardWillHide)
+        let keyboardWillShow = NotificationCenter.default.reactive.notifications(forName: Notification.Name.UIKeyboardWillShow)
+
+        Signal.merge([
+            keyboardWillShow.map { ($0, true) },
+            keyboardWillHide.map { ($0, false) }
+        ])
+            .take(duringLifetimeOf: self.reactive.lifetime)
+            .observeValues { [unowned self] (notification, isShow) in
+                let userInfo = notification.userInfo!
+                let animationCurve = UIViewAnimationCurve(rawValue: (userInfo[UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue)!
+                let animationDuration = userInfo[UIKeyboardAnimationDurationUserInfoKey] as! Double
+                let keyboardFrame = userInfo[UIKeyboardFrameEndUserInfoKey] as! CGRect
+
+                UIView.beginAnimations(nil, context: nil)
+                UIView.setAnimationCurve(animationCurve)
+                UIView.setAnimationDuration(animationDuration)
+                self.updateContentInset(keyboardHeight: isShow ? keyboardFrame.height : 0)
+                UIView.commitAnimations()
+            }
+    }
+
+    private func updateContentInset(keyboardHeight: CGFloat) {
+        collectionView.contentInset = UIEdgeInsets(top: keyboardHeight + chatInputView.frame.height, left: 0, bottom: 0, right: 0)
+        if collectionView.contentOffset.y <= chatInputView.frame.height {
+            collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x, y: -chatInputView.frame.height - keyboardHeight)
+        }
+        chatInputViewBottomConstraint.constant = keyboardHeight
+        self.layoutIfNeeded()
     }
 }
 

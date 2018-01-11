@@ -26,16 +26,28 @@
                         <inset key="sectionInset" minX="0.0" minY="0.0" maxX="0.0" maxY="0.0"/>
                     </collectionViewFlowLayout>
                 </collectionView>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="7jy-Ir-HeS" customClass="ChatInputView" customModule="UPTechChat" customModuleProvider="target">
+                    <rect key="frame" x="0.0" y="623" width="375" height="44"/>
+                    <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="44" placeholder="YES" id="9MP-nx-dBP"/>
+                    </constraints>
+                </view>
             </subviews>
             <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
             <constraints>
+                <constraint firstItem="7jy-Ir-HeS" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="4xg-Oc-6aG"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="trailing" secondItem="7jy-Ir-HeS" secondAttribute="trailing" id="EF3-lW-6GQ"/>
                 <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="6nC-3N-7sY" secondAttribute="bottom" id="PkG-W3-ZhC"/>
                 <constraint firstItem="6nC-3N-7sY" firstAttribute="top" secondItem="vUN-kp-3ea" secondAttribute="top" id="biX-YB-1cT"/>
                 <constraint firstItem="6nC-3N-7sY" firstAttribute="leading" secondItem="vUN-kp-3ea" secondAttribute="leading" id="cXa-u4-J4V"/>
+                <constraint firstItem="vUN-kp-3ea" firstAttribute="bottom" secondItem="7jy-Ir-HeS" secondAttribute="bottom" id="vh1-gj-g50"/>
                 <constraint firstAttribute="trailing" secondItem="6nC-3N-7sY" secondAttribute="trailing" id="vzV-zl-NaV"/>
             </constraints>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <connections>
+                <outlet property="chatInputView" destination="7jy-Ir-HeS" id="c8L-lG-fe4"/>
+                <outlet property="chatInputViewBottomConstraint" destination="vh1-gj-g50" id="7vr-hF-ATe"/>
                 <outlet property="collectionView" destination="6nC-3N-7sY" id="gBI-WQ-cZe"/>
             </connections>
         </view>
