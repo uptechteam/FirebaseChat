@@ -47,7 +47,6 @@ final class ChatViewController: UIViewController {
         chatView.reactive.clearInputText <~ viewModel.clearInputText
 
         chatView.reactive.inputTextChanges
-            .logEvents()
             .observe(viewModel.inputTextChangesObserver)
 
         chatView.reactive.sendButtonTap

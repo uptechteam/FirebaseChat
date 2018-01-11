@@ -39,7 +39,8 @@ final class ChatViewModel {
                 return messages.map { message in
                     let body = message.model.body
                     let isCurrentSender = message.model.sender == currentUser
-                    let content = ChatViewMessageContent(body: body, isCurrentSender: isCurrentSender)
+                    let title: String? = isCurrentSender ? nil : message.model.sender.name
+                    let content = ChatViewMessageContent(title: title, body: body, isCurrentSender: isCurrentSender)
                     return ChatViewItem.message(content)
                 }
             }
