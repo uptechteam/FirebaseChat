@@ -10,6 +10,12 @@ import ReactiveSwift
 import ReactiveCocoa
 import Result
 
+private let dateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "MMM d, h:mm a"
+    return dateFormatter
+}()
+
 final class ChatViewModel {
     let items: Property<[ChatViewItem]>
     let clearInputText: Signal<Void, NoError>
@@ -40,6 +46,11 @@ final class ChatViewModel {
                 for index in (0..<messages.count) {
                     let previousMessage: FirebaseEntity<Message>? = index > 0 ? messages[index - 1] : nil
                     let message = messages[index]
+
+                    if (previousMessage.map { message.model.date.timeIntervalSince($0.model.date) > 300 } ?? true) {
+                        items.append(.header(dateFormatter.string(from: message.model.date)))
+                    }
+
                     let body = message.model.body
                     let isCurrentSender = message.model.sender == currentUser
                     let shouldShowTitle = !isCurrentSender && previousMessage?.model.sender != message.model.sender

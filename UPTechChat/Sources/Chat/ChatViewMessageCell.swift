@@ -101,12 +101,12 @@ extension ChatViewMessageCell {
         let titleHeight: CGFloat = {
             guard let title = content.title else { return 0 }
             let textBoundingRect = (title as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: [], attributes: titleAttributes, context: nil)
-            return textBoundingRect.height
+            return CGFloat(ceilf(Float(textBoundingRect.height)))
         }()
 
         let textHeight: CGFloat = {
             let textBoundingRect = (content.body as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: textAttributes, context: nil)
-            return textBoundingRect.height
+            return CGFloat(ceilf(Float(textBoundingRect.height)))
         }()
 
         return titleHeight + textHeight + Constants.BubbleTopOffset + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom

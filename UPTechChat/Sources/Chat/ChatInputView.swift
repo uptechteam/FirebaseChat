@@ -14,6 +14,7 @@ import ReactiveCocoa
 final class ChatInputView: UIView {
     fileprivate let textField = UITextField()
     fileprivate let sendButton = UIButton()
+    fileprivate let (textFieldReturns, textFieldReturnsObserver) = Signal<Void, NoError>.pipe()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -42,14 +43,16 @@ final class ChatInputView: UIView {
             containerView.heightAnchor.constraint(equalToConstant: 40)
         ])
 
+        textField.delegate = self
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.placeholder = "Text Message"
-        textField.font = UIFont.systemFont(ofSize: 18)
+        textField.font = UIFont.systemFont(ofSize: 17)
         textField.tintColor = tintColor
+        textField.returnKeyType = .send
         containerView.addSubview(textField)
         containerView.addConstraints([
-            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            textField.topAnchor.constraint(equalTo: containerView.topAnchor),
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 14),
+            textField.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 2),
             textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
         ])
 
@@ -58,7 +61,7 @@ final class ChatInputView: UIView {
         sendButton.setTitleColor(UIColor.white, for: .normal)
         sendButton.setBackgroundImage(UIImage.cornerRoundedImage(color: tintColor, cornerRadius: 16), for: .normal)
         sendButton.setBackgroundImage(UIImage.cornerRoundedImage(color: tintColor.withAlphaComponent(0.7), cornerRadius: 16), for: .focused)
-        sendButton.titleLabel?.font = UIFont.systemFont(ofSize: 20)
+        sendButton.titleLabel?.font = UIFont.systemFont(ofSize: 17)
         containerView.addSubview(sendButton)
         containerView.addConstraints([
             sendButton.widthAnchor.constraint(equalToConstant: 32),
@@ -70,6 +73,13 @@ final class ChatInputView: UIView {
     }
 }
 
+extension ChatInputView: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textFieldReturnsObserver.send(value: ())
+        return false
+    }
+}
+
 extension Reactive where Base: ChatInputView {
     var inputTextChanges: Signal<String, NoError> {
         return base.textField.reactive.continuousTextValues
@@ -77,8 +87,10 @@ extension Reactive where Base: ChatInputView {
     }
 
     var sendButtonTap: Signal<Void, NoError> {
-        return base.sendButton.reactive.controlEvents(.touchUpInside)
+        let sendButtonTap = base.sendButton.reactive.controlEvents(.touchUpInside)
             .map { _ in () }
+
+        return Signal.merge([sendButtonTap, base.textFieldReturns])
     }
 
     var clearInputText: BindingTarget<Void> {

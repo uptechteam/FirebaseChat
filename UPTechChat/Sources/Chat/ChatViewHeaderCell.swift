@@ -26,10 +26,8 @@ final class ChatViewHeaderCell: ChatViewCell, Reusable {
         textLabel.textColor = UIColor.lightGray
         contentView.addSubview(textLabel)
         self.addConstraints([
-            textLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            textLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            textLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
-            textLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            textLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            textLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: 4)
         ])
     }
 
