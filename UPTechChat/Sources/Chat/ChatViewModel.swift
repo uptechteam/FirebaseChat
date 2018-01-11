@@ -36,13 +36,18 @@ final class ChatViewModel {
         let items = messages
             .combineLatest(with: currentUser)
             .map { (messages, currentUser) -> [ChatViewItem] in
-                return messages.map { message in
+                var items = [ChatViewItem]()
+                for index in (0..<messages.count) {
+                    let previousMessage: FirebaseEntity<Message>? = index > 0 ? messages[index - 1] : nil
+                    let message = messages[index]
                     let body = message.model.body
                     let isCurrentSender = message.model.sender == currentUser
-                    let title: String? = isCurrentSender ? nil : message.model.sender.name
+                    let shouldShowTitle = !isCurrentSender && previousMessage?.model.sender != message.model.sender
+                    let title: String? = shouldShowTitle ? message.model.sender.name : nil
                     let content = ChatViewMessageContent(title: title, body: body, isCurrentSender: isCurrentSender)
-                    return ChatViewItem.message(content)
+                    items.append(ChatViewItem.message(content))
                 }
+                return items
             }
 
         let clearInputText = inputText.signal
