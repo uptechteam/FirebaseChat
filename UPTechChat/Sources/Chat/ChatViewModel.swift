@@ -17,7 +17,7 @@ final class ChatViewModel {
     let inputTextChangesObserver: Signal<String, NoError>.Observer
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
 
-    init(messagesProvider: MessagesProvider, chatEntity: FirebaseEntity<Chat>) {
+    init(messagesProvider: MessagesProvider, userProvider: UserProvider, chatEntity: FirebaseEntity<Chat>) {
         let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
 
@@ -30,11 +30,16 @@ final class ChatViewModel {
             ])
         )
 
+        let currentUser = userProvider.currentUser
+
         let messages = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: Signal<Void, NoError>.never)
         let items = messages
-            .map { messages -> [ChatViewItem] in
+            .combineLatest(with: currentUser)
+            .map { (messages, currentUser) -> [ChatViewItem] in
                 return messages.map { message in
-                    let content = ChatViewMessageContent(body: message.model.body, isCurrentSender: false)
+                    let body = message.model.body
+                    let isCurrentSender = message.model.sender == currentUser
+                    let content = ChatViewMessageContent(body: body, isCurrentSender: isCurrentSender)
                     return ChatViewItem.message(content)
                 }
             }
@@ -43,8 +48,9 @@ final class ChatViewModel {
             .sample(on: sendButtonTap)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .flatMap(.latest) { (text) -> SignalProducer<Void, NoError> in
-                let message = Message(body: text, date: Date())
+            .withLatest(from: currentUser.producer)
+            .flatMap(.latest) { (text, currentUser) -> SignalProducer<Void, NoError> in
+                let message = Message(body: text, date: Date(), sender: currentUser)
                 return messagesProvider.post(message: message, to: chatEntity)
                     .flatMapError { _ in SignalProducer<Void, NoError>.empty }
             }
