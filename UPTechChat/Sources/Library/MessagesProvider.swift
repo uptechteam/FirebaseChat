@@ -3,7 +3,7 @@
 //  UPTechChat
 //
 //  Created by Evgeny Matviyenko on 1/4/18.
-//  Copyright © 2018 upteachteam. All rights reserved.
+//  Copyright © 2018 uptechteam. All rights reserved.
 //
 
 import Foundation
@@ -12,7 +12,7 @@ import ObjectMapper
 import ReactiveSwift
 import Result
 
-private let DefaultMessagesBatchCount = 50
+private let DefaultMessagesBatchCount = 40
 
 enum MessagesProviderError: Swift.Error {
     case wrapped(Swift.Error)
@@ -39,12 +39,23 @@ final class MessagesProvider {
         ) -> MessagesResult {
 
         let reference = database.reference(withPath: "messages/\(chatEntity.identifier)")
+        let (errors, errorsObserver) = Signal<MessagesProviderError, NoError>.pipe()
 
-        func loadMessageEntitiesOnce(limit: Int, cursor: FirebaseEntity<Message>) -> SignalProducer<[FirebaseEntity<Message>], MessagesProviderError> {
-            let query = reference
-                .queryOrdered(byChild: "date")
-                .queryEnding(atValue: cursor.model.date.timeIntervalSince1970, childKey: "date")
-                .queryLimited(toLast: UInt(limit))
+        /// Emmits message entities once, limiting count to `limit` and paginating to `cursor`s max date
+        func fetchMessageEntitiesOnce(limit: Int, cursor: FirebaseEntity<Message>?) -> SignalProducer<[FirebaseEntity<Message>], MessagesProviderError> {
+
+            let query: DatabaseQuery = {
+                let q1 = reference.queryOrdered(byChild: "date")
+
+                // If cursor is not nil, add ending predicate
+                let q2 = cursor.map { q1.queryEnding(atValue: $0.model.date.timeIntervalSince1970, childKey: "date") } ?? q1
+
+                // Firebase duplicates cursor in response, so we increase limit by one to keep number of messages true
+                let limit = cursor != nil ? limit + 1 : limit
+                let q3 = q2.queryLimited(toLast: UInt(limit))
+
+                return q3
+            }()
 
             return SignalProducer { (observer: Signal<[FirebaseEntity<Message>], MessagesProviderError>.Observer, _: Lifetime) in
                 query.observeSingleEvent(of: DataEventType.value, with: { (snapshot) in
@@ -61,7 +72,7 @@ final class MessagesProvider {
                                 let model = try mapper.map(JSONObject: value)
                                 return FirebaseEntity(identifier: key, model: model)
                             }
-                            .sorted(by: { $0.model.date < $1.model.date })
+                            .sorted(by: { $0.model.date.timeIntervalSince1970 < $1.model.date.timeIntervalSince1970 })
 
                         observer.send(value: entities)
                         observer.sendCompleted()
@@ -73,47 +84,58 @@ final class MessagesProvider {
                 })
             }
                 .start(on: self.scheduler)
+                .map { messages in
+                    // If cursor is not nil drop last message to avoid duplicates
+                    return cursor != nil ? Array(messages.dropLast()) : messages
+                }
         }
 
-        let (errors, errorsObserver) = Signal<MessagesProviderError, NoError>.pipe()
+        /// Emmits all observed messages with min `cursor`s date.
+        func observeNewMessageEntities(cursor: FirebaseEntity<Message>?) -> SignalProducer<FirebaseEntity<Message>, NoError> {
+            let query: DatabaseQuery = {
+                let q1 = reference.queryOrdered(byChild: "date")
 
-        let newMessages = Signal<FirebaseEntity<Message>, NoError> { (observer, lifetime) in
-            let query = reference
-                .queryOrdered(byChild: "date")
-                .queryLimited(toLast: UInt(DefaultMessagesBatchCount))
+                let q2 = cursor.map { q1.queryStarting(atValue: $0.model.date.timeIntervalSince1970, childKey: "date") } ?? q1
 
-            let handle = query.observe(.childAdded) { (snapshot) in
-                guard let rawMessage = snapshot.value as? [String: Any] else {
-                    return
+                return q2
+            }()
+
+            return SignalProducer<FirebaseEntity<Message>, NoError> { observer, lifetime in
+                let handle = query.observe(.childAdded) { (snapshot) in
+                    guard let rawMessage = snapshot.value as? [String: Any] else {
+                        return
+                    }
+
+                    do {
+                        let model: Message = try Mapper<Message>().map(JSON: rawMessage)
+                        observer.send(value: FirebaseEntity(identifier: snapshot.key, model: model))
+                    } catch {
+                        errorsObserver.send(value: .wrapped(error))
+                    }
                 }
 
-                do {
-                    let model: Message = try Mapper<Message>().map(JSON: rawMessage)
-                    observer.send(value: FirebaseEntity(identifier: snapshot.key, model: model))
-                } catch {
-                    errorsObserver.send(value: .wrapped(error))
+                lifetime.observeEnded {
+                    reference.removeObserver(withHandle: handle)
                 }
-            }
-
-            lifetime.observeEnded {
-                reference.removeObserver(withHandle: handle)
             }
         }
-            .map { [$0] }
 
-        let cursor = MutableProperty<FirebaseEntity<Message>?>(nil)
+        let paginationCursor = MutableProperty<FirebaseEntity<Message>?>(nil)
         let isLoadingMore = MutableProperty<Bool>(false)
         let isReachedEnd = MutableProperty<Bool>(false)
 
-        let paginatedMessages = loadMoreMessages
+        let paginatedMessagesFlow = SignalProducer(loadMoreMessages)
+            .prefix(value: ())
+            .observe(on: scheduler)
+            .withLatest(from: isLoadingMore)
+            .filter { $1 == false }
             .withLatest(from: isReachedEnd.producer)
             .filter { $1 == false }
-            .observe(on: self.scheduler)
-            .withLatest(from: cursor.producer)
-            .filterMap { $1 }
-            .flatMap(.concurrent(limit: 1)) { cursor -> SignalProducer<[FirebaseEntity<Message>], NoError> in
+            .withLatest(from: paginationCursor.producer)
+            .map { $1 }
+            .flatMap(.latest) { cursor -> SignalProducer<[FirebaseEntity<Message>], NoError> in
                 isLoadingMore.value = true
-                return loadMessageEntitiesOnce(limit: DefaultMessagesBatchCount, cursor: cursor)
+                return fetchMessageEntitiesOnce(limit: DefaultMessagesBatchCount, cursor: cursor)
                     .flatMapError { error -> SignalProducer<[FirebaseEntity<Message>], NoError> in
                         errorsObserver.send(value: error)
                         return .empty
@@ -129,31 +151,31 @@ final class MessagesProvider {
                         }
                     )
             }
-
-        let messages = Signal<[FirebaseEntity<Message>], NoError>.merge([newMessages, paginatedMessages])
-            .observe(on: self.scheduler)
-            .scan([FirebaseEntity<Message>]()) { (accum, messageEntities) in
-                var mergedResult = messageEntities
-                var ids = Set<String>()
-                messageEntities.forEach { ids.insert($0.identifier) }
-
-                accum.forEach { message in
-                    if !ids.contains(message.identifier) {
-                        ids.insert(message.identifier)
-                        mergedResult.append(message)
-                    }
-                }
-
-                return mergedResult
-                    .sorted(by: { $0.model.date < $1.model.date })
-            }
+            .scan([FirebaseEntity<Message>]()) { $1 + $0 }
             .on(value: { messages in
-                cursor.value = messages.first
+                paginationCursor.value = messages.first
             })
 
-        let messagesProperty = Property(initial: [], then: messages)
+        let paginatedMessages = Property<[FirebaseEntity<Message>]?>(initial: nil, then: paginatedMessagesFlow)
 
-        return MessagesResult(messages: messagesProperty, isLoadingMore: isLoadingMore.map { $0 }, errors: errors)
+        let newMessagesFlow = paginatedMessages.producer
+            .filterMap { $0 }
+            .take(first: 1)
+            .flatMap(.latest) { paginatedMessages -> SignalProducer<FirebaseEntity<Message>, NoError> in
+                let cursor = paginatedMessages.last
+                return observeNewMessageEntities(cursor: cursor)
+            }
+            .map { [$0] }
+            .scan([FirebaseEntity<Message>]()) { $0 + $1 }
+
+        let newMessages = Property<[FirebaseEntity<Message>]?>(initial: nil, then: newMessagesFlow)
+
+        let messages = Property.combineLatest(paginatedMessages, newMessages)
+            .map { (paginatedMessagesOrNil, newMessagesOrNil) -> [FirebaseEntity<Message>] in
+                return (paginatedMessagesOrNil ?? []) + (newMessagesOrNil ?? [])
+            }
+
+        return MessagesResult(messages: messages, isLoadingMore: isLoadingMore.map { $0 }, errors: errors)
     }
 
     func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, MessagesProviderError> {

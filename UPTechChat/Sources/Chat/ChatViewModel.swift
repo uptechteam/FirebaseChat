@@ -18,6 +18,7 @@ private let dateFormatter: DateFormatter = {
 
 final class ChatViewModel {
     let items: Property<[ChatViewItem]>
+    let title: Property<String>
     let clearInputText: Signal<Void, NoError>
 
     let inputTextChangesObserver: Signal<String, NoError>.Observer
@@ -71,7 +72,7 @@ final class ChatViewModel {
 
                 return loadingItem + messageItems
             }
-            .debounce(0.2, on: scheduler)
+            .throttle(0.2, on: scheduler)
 
         let clearInputText = inputText.signal
             .sample(on: sendButtonTap)
@@ -86,6 +87,7 @@ final class ChatViewModel {
             .on(value: _clearInputTextObserver.send)
 
         self.items = Property(initial: [], then: itemsProducer)
+        self.title = Property(value: chatEntity.model.name)
         self.clearInputText = clearInputText
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver

@@ -91,9 +91,10 @@ extension Reactive where Base: ChatView {
             .filter { [weak base] point -> Bool in
                 guard let base = base else { return false }
                 let delta = base.collectionView.contentSize.height - point.y - base.collectionView.frame.height
-                return delta < 200
+                return delta < 100
             }
             .map { _ in () }
+            .throttle(0.1, on: QueueScheduler.main)
     }
 
     var items: BindingTarget<[ChatViewItem]> {

@@ -44,6 +44,10 @@ final class ChatViewController: UIViewController {
     private func bindViewModel() {
         chatView.reactive.items <~ viewModel.items
 
+        viewModel.title.producer
+            .take(duringLifetimeOf: self)
+            .startWithValues { [weak self] in self?.title = $0 }
+
         chatView.reactive.clearInputText <~ viewModel.clearInputText
 
         chatView.reactive.inputTextChanges
@@ -53,7 +57,6 @@ final class ChatViewController: UIViewController {
             .observe(viewModel.sendButtonTapObserver)
 
         chatView.reactive.scrolledToTop
-            .throttle(1, on: QueueScheduler.main)
             .observe(viewModel.scrolledToTopObserver)
     }
 }
