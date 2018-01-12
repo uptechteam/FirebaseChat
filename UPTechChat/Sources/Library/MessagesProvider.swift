@@ -103,8 +103,11 @@ final class MessagesProvider {
 
         let cursor = MutableProperty<FirebaseEntity<Message>?>(nil)
         let isLoadingMore = MutableProperty<Bool>(false)
+        let isReachedEnd = MutableProperty<Bool>(false)
 
         let paginatedMessages = loadMoreMessages
+            .withLatest(from: isReachedEnd.producer)
+            .filter { $1 == false }
             .observe(on: self.scheduler)
             .withLatest(from: cursor.producer)
             .filterMap { $1 }
@@ -115,7 +118,16 @@ final class MessagesProvider {
                         errorsObserver.send(value: error)
                         return .empty
                     }
-                    .on(completed: { isLoadingMore.value = false })
+                    .on(
+                        completed: {
+                            isLoadingMore.value = false
+                        },
+                        value: { messages in
+                            if messages.count < DefaultMessagesBatchCount {
+                                isReachedEnd.value = true
+                            }
+                        }
+                    )
             }
 
         let messages = Signal<[FirebaseEntity<Message>], NoError>.merge([newMessages, paginatedMessages])
