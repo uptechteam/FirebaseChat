@@ -37,6 +37,7 @@ final class ChatViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(ChatViewController.shareBarButtonItemPressed(_:)))
         bindViewModel()
     }
 
@@ -54,6 +55,14 @@ final class ChatViewController: UIViewController {
 
         chatView.reactive.clearInputText <~ viewModel.clearInputText
 
+        viewModel.showUrlShareMenu
+            .take(duringLifetimeOf: self)
+            .observeValues { [weak self] url in
+                let viewController = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+                viewController.excludedActivityTypes = [UIActivityType.addToReadingList]
+                self?.present(viewController, animated: true, completion: nil)
+            }
+
         chatView.reactive.inputTextChanges
             .observe(viewModel.inputTextChangesObserver)
 
@@ -62,5 +71,9 @@ final class ChatViewController: UIViewController {
 
         chatView.reactive.scrolledToTop
             .observe(viewModel.scrolledToTopObserver)
+    }
+
+    @objc private func shareBarButtonItemPressed(_ barButtonItem: UIBarButtonItem) {
+        viewModel.shareMenuButtonTapObserver.send(value: ())
     }
 }

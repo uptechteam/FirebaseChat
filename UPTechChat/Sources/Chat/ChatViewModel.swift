@@ -20,10 +20,12 @@ final class ChatViewModel {
     let items: Property<[ChatViewItem]>
     let title: Property<String>
     let clearInputText: Signal<Void, NoError>
+    let showUrlShareMenu: Signal<URL, NoError>
 
     let inputTextChangesObserver: Signal<String, NoError>.Observer
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
     let scrolledToTopObserver: Signal<Void, NoError>.Observer
+    let shareMenuButtonTapObserver: Signal<Void, NoError>.Observer
 
     init(messagesProvider: MessagesProvider = .shared,
          userProvider: UserProvider = .shared,
@@ -32,6 +34,7 @@ final class ChatViewModel {
         let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
+        let (shareMenuButtonTap, shareMenuButtonTapObserver) = Signal<Void, NoError>.pipe()
 
         let (_clearInputText, _clearInputTextObserver) = Signal<Void, NoError>.pipe()
         let inputText = Property<String>(
@@ -89,12 +92,19 @@ final class ChatViewModel {
             }
             .on(value: _clearInputTextObserver.send)
 
+        let showUrlShareMenu = shareMenuButtonTap
+            .filterMap { () -> URL? in
+                return URL(string: "uptechchat://join/\(chatEntity.identifier)")
+            }
+
         self.items = Property(initial: [], then: itemsProducer)
         self.title = Property(value: chatEntity.model.name)
         self.clearInputText = clearInputText
+        self.showUrlShareMenu = showUrlShareMenu
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver
         self.scrolledToTopObserver = scrolledToTopObserver
+        self.shareMenuButtonTapObserver = shareMenuButtonTapObserver
     }
 }
 
