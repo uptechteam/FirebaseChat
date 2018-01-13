@@ -17,7 +17,7 @@ final class ChatsViewModel {
     let addChatIdentifierObserver: Signal<String, NoError>.Observer
     let selectedItemIndexObserver: Signal<Int, NoError>.Observer
 
-    init(chatsProvider: ChatsProvider) {
+    init(chatsProvider: ChatsProvider = .shared) {
         let (addChatIdentifier, addChatIdentifierObserver) = Signal<String, NoError>.pipe()
         let (chatsProviderErrors, chatsProviderErrorsObserver) = Signal<ChatsProviderError, NoError>.pipe()
         let (selectedItemIndex, selectedItemIndexObserver) = Signal<Int, NoError>.pipe()
