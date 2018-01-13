@@ -13,15 +13,18 @@ final class ChatsViewModel {
     let items: Property<[ChatsViewItem]>
     let showErrorAlert: Signal<(String, String), NoError>
     let showChat: Signal<FirebaseEntity<Chat>, NoError>
+    let leftChat: Signal<Void, NoError>
 
-    let addChatIdentifierObserver: Signal<String, NoError>.Observer
+    let joinChatIdentifierObserver: Signal<String, NoError>.Observer
     let selectedItemIndexObserver: Signal<Int, NoError>.Observer
+    let leaveItemIndexObserver: Signal<Int, NoError>.Observer
     let createChatObserver: Signal<String, NoError>.Observer
 
     init(chatsProvider: ChatsProvider = .shared) {
-        let (addChatIdentifier, addChatIdentifierObserver) = Signal<String, NoError>.pipe()
+        let (joinChatIdentifier, joinChatIdentifierObserver) = Signal<String, NoError>.pipe()
         let (chatsProviderErrors, chatsProviderErrorsObserver) = Signal<ChatsProviderError, NoError>.pipe()
         let (selectedItemIndex, selectedItemIndexObserver) = Signal<Int, NoError>.pipe()
+        let (leaveItemIndex, leaveItemIndexObserver) = Signal<Int, NoError>.pipe()
         let (createChat, createChatObserver) = Signal<String, NoError>.pipe()
 
         let createdChatIdentifier = createChat
@@ -36,16 +39,30 @@ final class ChatsViewModel {
             }
             .map { $0.identifier }
 
-        let chatAdded = Signal.merge([addChatIdentifier, createdChatIdentifier])
+        let joinedChat = Signal.merge([joinChatIdentifier, createdChatIdentifier])
             .flatMap(.concat) { identifier -> SignalProducer<Void, NoError> in
-                return chatsProvider.addChat(identifier: identifier)
+                return chatsProvider.joinChat(identifier: identifier)
                     .flatMapError { error in
                         chatsProviderErrorsObserver.send(value: error)
                         return .empty
                     }
             }
 
-        let chatEntities = chatsProvider.fetchChats(reload: chatAdded)
+        let (_leftChat, _leftChatObserver) = Signal<Void, NoError>.pipe()
+
+        let chatEntities = chatsProvider.fetchChats(reload: Signal.merge([joinedChat, _leftChat]))
+
+        let leftChat = leaveItemIndex
+            .withLatest(from: chatEntities.producer)
+            .map { $1[$0] }
+            .flatMap(.concat) { chatEntity in
+                return chatsProvider.leaveChat(chatEntity: chatEntity)
+                    .flatMapError { error -> SignalProducer<Void, NoError> in
+                        chatsProviderErrorsObserver.send(value: error)
+                        return .empty
+                    }
+            }
+            .on(value: _leftChatObserver.send)
 
         let items = chatEntities
             .map { chatEntities -> [ChatsViewItem] in
@@ -79,8 +96,10 @@ final class ChatsViewModel {
         self.items = items
         self.showErrorAlert = showErrorAlert
         self.showChat = showChat
-        self.addChatIdentifierObserver = addChatIdentifierObserver
+        self.leftChat = leftChat
+        self.joinChatIdentifierObserver = joinChatIdentifierObserver
         self.selectedItemIndexObserver = selectedItemIndexObserver
+        self.leaveItemIndexObserver = leaveItemIndexObserver
         self.createChatObserver = createChatObserver
     }
 }

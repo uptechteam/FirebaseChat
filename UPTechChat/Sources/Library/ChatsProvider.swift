@@ -46,7 +46,7 @@ final class ChatsProvider {
         }
     }
 
-    func addChat(identifier: String) -> SignalProducer<Void, ChatsProviderError> {
+    func joinChat(identifier: String) -> SignalProducer<Void, ChatsProviderError> {
         func isIdentifierValid() -> SignalProducer<Bool, NoError> {
             let reference = chatReference(identifier: identifier)
             return .init { observer, lifetime in
@@ -92,6 +92,19 @@ final class ChatsProvider {
             }
     }
 
+    func leaveChat(chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, ChatsProviderError> {
+        return .init { () -> Result<Void, ChatsProviderError> in
+            let mutableArray = self.userDefaults.mutableArrayValue(forKey: ChatsKey)
+            let identifiers = mutableArray.flatMap { $0 as? String }
+            guard let index = identifiers.index(of: chatEntity.identifier) else {
+                return .failure(.chatNotFound)
+            }
+            mutableArray.removeObject(at: index)
+            self.userDefaults.synchronize()
+            return .success(())
+        }
+    }
+
     func fetchChats(reload: Signal<Void, NoError>) -> Property<[FirebaseEntity<Chat>]> {
         func fetchChatIdentifiers() -> SignalProducer<[String], NoError> {
             return .init { () -> [String] in
@@ -122,6 +135,10 @@ final class ChatsProvider {
             .prefix(value: ())
             .flatMap(.latest, fetchChatIdentifiers)
             .flatMap(.latest) { chatIdentifiers -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
+                guard chatIdentifiers.isEmpty == false else {
+                    return .init(value: [])
+                }
+
                 let deferredChatEntities = chatIdentifiers
                     .map { chatIdentifier -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
                         return observeFirebaseChatEntity(identifier: chatIdentifier)

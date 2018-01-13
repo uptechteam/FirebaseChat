@@ -38,7 +38,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool {
         let pathComponents = url.pathComponents
         if pathComponents.count == 2 {
-            chatsViewModel?.addChatIdentifierObserver.send(value: pathComponents[1])
+            chatsViewModel?.joinChatIdentifierObserver.send(value: pathComponents[1])
         }
 
         return true

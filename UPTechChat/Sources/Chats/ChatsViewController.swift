@@ -43,11 +43,18 @@ final class ChatsViewController: UIViewController {
         chatsView.reactive.selectedItemIndex
             .observe(viewModel.selectedItemIndexObserver)
 
+        chatsView.reactive.leaveItemIndex
+            .observe(viewModel.leaveItemIndexObserver)
+
         chatsView.reactive.items <~ viewModel.items
 
         viewModel.showErrorAlert
             .take(duringLifetimeOf: self)
             .observeValues { [weak self] in self?.showAlert(title: $0, message: $1) }
+
+        viewModel.leftChat
+            .take(duringLifetimeOf: self)
+            .observeValues { }
 
         viewModel.showChat
             .take(duringLifetimeOf: self)
