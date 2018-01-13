@@ -52,6 +52,10 @@ final class ChatViewModel {
         let itemsProducer = Property.combineLatest(messagesResult.messages, currentUser, messagesResult.isLoadingMore).producer
             .observe(on: scheduler)
             .map { (messages, currentUser, isLoadingMore) -> [ChatViewItem] in
+                if messages.isEmpty && isLoadingMore == false {
+                    return [.header("No messages yet")]
+                }
+
                 let splittedMessages = splitMessages(messages)
 
                 let messageItems = splittedMessages.flatMap { dateGroup -> [ChatViewItem] in
