@@ -21,6 +21,7 @@ final class ChatsDataSource: NSObject {
 
     func set(tableView: UITableView) {
         tableView.register(ChatsCell.self, forCellReuseIdentifier: ChatsCell.reuseIdentifier)
+        tableView.register(ChatsInfoCell.self, forCellReuseIdentifier: ChatsInfoCell.reuseIdentifier)
         tableView.dataSource = self
         self.tableView = tableView
     }
@@ -40,6 +41,10 @@ extension ChatsDataSource: UITableViewDataSource {
         case let .chat(title, subtitle):
             let cell = tableView.dequeueReusableCell(withIdentifier: ChatsCell.reuseIdentifier, for: indexPath) as! ChatsCell
             cell.configure(title: title, subtitle: subtitle)
+            return cell
+        case let .info(title, message):
+            let cell = tableView.dequeueReusableCell(withIdentifier: ChatsInfoCell.reuseIdentifier, for: indexPath) as! ChatsInfoCell
+            cell.configure(title: title, message: message)
             return cell
         }
     }

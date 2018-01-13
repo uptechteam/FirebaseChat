@@ -29,6 +29,16 @@ final class ChatsView: UIView {
 }
 
 extension ChatsView: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let item = dataSource.items[indexPath.row]
+        switch item {
+        case .info:
+            return tableView.frame.height
+        case .chat:
+            return 80
+        }
+    }
+
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         selectedItemIndexObserver.send(value: indexPath.row)

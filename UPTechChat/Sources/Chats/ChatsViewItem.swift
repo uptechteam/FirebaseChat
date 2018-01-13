@@ -10,6 +10,7 @@ import UIKit
 
 enum ChatsViewItem {
     case chat(title: String, subtitle: String)
+    case info(title: String, message: String)
 }
 
 extension ChatsViewItem: Equatable {
@@ -17,6 +18,10 @@ extension ChatsViewItem: Equatable {
         switch (lhs, rhs) {
         case let (.chat(lTitle, lSubtitle), .chat(rTitle, rSubtitle)):
             return lTitle == rTitle && lSubtitle == rSubtitle
+        case let (.info(lTitle, lMessage), .chat(rTitle, rMessage)):
+            return lTitle == rTitle && lMessage == rMessage
+        default:
+            return false
         }
     }
 }

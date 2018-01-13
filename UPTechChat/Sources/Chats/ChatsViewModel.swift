@@ -66,6 +66,10 @@ final class ChatsViewModel {
 
         let items = chatEntities
             .map { chatEntities -> [ChatsViewItem] in
+                guard chatEntities.isEmpty == false else {
+                    return [ChatsViewItem.info(title: "No chats here yet", message: "In order to start a conversation you need to create a chat or ask your friend to send you a link")]
+                }
+
                 return chatEntities.map { chatEntity -> ChatsViewItem in
                     let title = chatEntity.model.name
                     let subtitle = chatEntity.model.lastMessage.map { "\($0.sender.name): \($0.body)" } ?? "No messages yet"
@@ -91,7 +95,13 @@ final class ChatsViewModel {
 
         let showChat = selectedItemIndex
             .withLatest(from: chatEntities.producer)
-            .map { $1[$0] }
+            .filterMap { (index, chatEntities) -> FirebaseEntity<Chat>? in
+                guard chatEntities.isEmpty == false else {
+                    return nil
+                }
+
+                return chatEntities[index]
+            }
 
         self.items = items
         self.showErrorAlert = showErrorAlert
