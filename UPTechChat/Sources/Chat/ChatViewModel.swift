@@ -54,10 +54,13 @@ final class ChatViewModel {
         let currentUser = userProvider.currentUser
 
         let messagesLoadableProperty = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
-
-        let itemsProducer = Property.combineLatest(messagesLoadableProperty.property, currentUser, messagesLoadableProperty.isLoading).producer
-            .observe(on: scheduler)
-            .map { (messages, currentUser, isLoadingMore) -> [ChatViewItem] in
+        let itemsProducer = SignalProducer.combineLatest(
+            messagesLoadableProperty.property.producer,
+            messagesLoadableProperty.isLoading.producer,
+            currentUser.producer
+        )
+            .throttle(0.2, on: scheduler)
+            .map { (messages, isLoading, currentUser) -> [ChatViewItem] in
                 let messageItems: [ChatViewItem] = {
                     guard let messages = messages else {
                         return []
@@ -89,11 +92,10 @@ final class ChatViewModel {
                     }
                 }()
 
-                let loadingItem: [ChatViewItem] = isLoadingMore ? [ChatViewItem.loading] : []
+                let loadingItem: [ChatViewItem] = isLoading ? [.loading] : []
 
                 return loadingItem + messageItems
             }
-            .throttle(0.2, on: scheduler)
 
         let clearInputText = sendButtonTap
             .withLatest(from: inputText.producer)
