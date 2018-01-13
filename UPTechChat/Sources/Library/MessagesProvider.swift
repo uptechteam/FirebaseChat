@@ -25,10 +25,12 @@ struct MessagesResult {
 }
 
 final class MessagesProvider {
+    static let shared = MessagesProvider()
+
     private let database: Database
     private let scheduler: QueueScheduler
 
-    init(database: Database, scheduler: QueueScheduler = .messages) {
+    init(database: Database = .database(), scheduler: QueueScheduler = .messages) {
         self.database = database
         self.scheduler = scheduler
     }

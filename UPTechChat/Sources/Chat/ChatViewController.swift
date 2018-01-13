@@ -11,7 +11,7 @@ import ReactiveSwift
 import ReactiveCocoa
 
 final class ChatViewController: UIViewController {
-    lazy var chatView: ChatView = {
+    private lazy var chatView: ChatView = {
         let nib = UINib(nibName: "ChatView", bundle: Bundle(for: ChatView.self))
         return nib.instantiate(withOwner: self, options: nil).first as! ChatView
     }()
@@ -20,6 +20,10 @@ final class ChatViewController: UIViewController {
 
     override func loadView() {
         self.view = chatView
+    }
+
+    convenience init(chatEntity: FirebaseEntity<Chat>) {
+        self.init(viewModel: ChatViewModel(chatEntity: chatEntity))
     }
 
     init(viewModel: ChatViewModel) {

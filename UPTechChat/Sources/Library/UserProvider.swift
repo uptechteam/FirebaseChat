@@ -11,6 +11,8 @@ import ReactiveSwift
 import Result
 
 final class UserProvider {
+    static let shared = UserProvider()
+
     var currentUser: Property<User> {
         let user = User(name: UIDevice.current.name)
         return Property(value: user)

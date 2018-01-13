@@ -25,7 +25,10 @@ final class ChatViewModel {
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
     let scrolledToTopObserver: Signal<Void, NoError>.Observer
 
-    init(messagesProvider: MessagesProvider, userProvider: UserProvider, scheduler: QueueScheduler = .messages, chatEntity: FirebaseEntity<Chat>) {
+    init(messagesProvider: MessagesProvider = .shared,
+         userProvider: UserProvider = .shared,
+         scheduler: QueueScheduler = .messages,
+         chatEntity: FirebaseEntity<Chat>) {
         let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
