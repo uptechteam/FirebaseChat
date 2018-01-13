@@ -16,6 +16,12 @@ private let dateFormatter: DateFormatter = {
     return dateFormatter
 }()
 
+private let preciseTimeDateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "h:mm a"
+    return dateFormatter
+}()
+
 final class ChatViewModel {
     let items: Property<[ChatViewItem]>
     let title: Property<String>
@@ -69,7 +75,8 @@ final class ChatViewModel {
                                     title: !isCurrentSender && senderGroupIndex == 0 ? message.model.sender.name : nil,
                                     body: message.model.body,
                                     isCurrentSender: isCurrentSender,
-                                    isCrooked: senderGroupIndex == senderGroup.messages.count - 1
+                                    isCrooked: senderGroupIndex == senderGroup.messages.count - 1,
+                                    hiddenText: preciseTimeDateFormatter.string(from: message.model.date)
                                 )
 
                                 return .message(content)
@@ -88,8 +95,9 @@ final class ChatViewModel {
             }
             .throttle(0.2, on: scheduler)
 
-        let clearInputText = inputText.signal
-            .sample(on: sendButtonTap)
+        let clearInputText = sendButtonTap
+            .withLatest(from: inputText.producer)
+            .map { $1 }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .withLatest(from: currentUser.producer)

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6A09FD9F200AAFC90040C652 /* ChatCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A09FD9E200AAFC90040C652 /* ChatCollectionView.swift */; };
 		6A54BC5C200773BE00E8B75C /* ChatInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A54BC5B200773BE00E8B75C /* ChatInputView.swift */; };
 		6A6E3EF32007F48E0093AF40 /* UserProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A6E3EF22007F48E0093AF40 /* UserProvider.swift */; };
 		6A6E3EF52008D1310093AF40 /* QueueScheduler+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A6E3EF42008D1310093AF40 /* QueueScheduler+Chat.swift */; };
@@ -45,6 +46,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6A09FD9E200AAFC90040C652 /* ChatCollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatCollectionView.swift; sourceTree = "<group>"; };
 		6A54BC5B200773BE00E8B75C /* ChatInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputView.swift; sourceTree = "<group>"; };
 		6A6E3EF22007F48E0093AF40 /* UserProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProvider.swift; sourceTree = "<group>"; };
 		6A6E3EF42008D1310093AF40 /* QueueScheduler+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "QueueScheduler+Chat.swift"; sourceTree = "<group>"; };
@@ -155,6 +157,7 @@
 				6A7D9CF21FFE53D800ED398D /* ChatViewController.swift */,
 				6AE686ED2003762F00E5580B /* ChatView.swift */,
 				6AE686EF2003764600E5580B /* ChatView.xib */,
+				6A09FD9E200AAFC90040C652 /* ChatCollectionView.swift */,
 				6AE686F12003780700E5580B /* ChatViewItem.swift */,
 				6AE686F32003782400E5580B /* ChatDataSource.swift */,
 				6AA0758B2004D179005D08E4 /* ChatViewCell.swift */,
@@ -378,6 +381,7 @@
 				6AA0758C2004D179005D08E4 /* ChatViewCell.swift in Sources */,
 				6AE686EE2003762F00E5580B /* ChatView.swift in Sources */,
 				6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */,
+				6A09FD9F200AAFC90040C652 /* ChatCollectionView.swift in Sources */,
 				6AE686FD200396EE00E5580B /* ChatViewLoadingCell.swift in Sources */,
 				6A7D9CF31FFE53D800ED398D /* ChatViewController.swift in Sources */,
 				6AE86C991FFE312500DB7C47 /* AppDelegate.swift in Sources */,

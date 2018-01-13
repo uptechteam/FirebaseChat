@@ -11,9 +11,9 @@ import Changeset
 
 final class ChatDataSource: NSObject {
     private(set) var items = [ChatViewItem]()
-    private weak var collectionView: UICollectionView?
+    private weak var collectionView: ChatCollectionView?
 
-    func set(collectionView: UICollectionView) {
+    func set(collectionView: ChatCollectionView) {
         collectionView.register(ChatViewMessageCell.self, forCellWithReuseIdentifier: ChatViewMessageCell.reuseIdentifier)
         collectionView.register(ChatViewLoadingCell.self, forCellWithReuseIdentifier: ChatViewLoadingCell.reuseIdentifier)
         collectionView.register(ChatViewHeaderCell.self, forCellWithReuseIdentifier: ChatViewHeaderCell.reuseIdentifier)
@@ -55,6 +55,9 @@ extension ChatDataSource: UICollectionViewDataSource {
         case .message(let content):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatViewMessageCell.reuseIdentifier, for: indexPath) as! ChatViewMessageCell
             cell.configure(with: content)
+            if let collectionView = collectionView as? ChatCollectionView {
+                cell.observePanGestureState(collectionView.horizontalPanGestureRecognizer.reactive.stateChanged)
+            }
             return cell
         }
     }

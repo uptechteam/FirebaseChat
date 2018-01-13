@@ -15,7 +15,7 @@ final class ChatView: UIView {
     var collectionViewLayout: UICollectionViewFlowLayout {
         return collectionView.collectionViewLayout as! UICollectionViewFlowLayout
     }
-    @IBOutlet weak var collectionView: UICollectionView!
+    @IBOutlet weak var collectionView: ChatCollectionView!
     @IBOutlet weak var chatInputView: ChatInputView!
     @IBOutlet weak var chatInputViewBottomConstraint: NSLayoutConstraint!
 

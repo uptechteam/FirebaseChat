@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import ReactiveSwift
+import Result
 
 final class ChatViewMessageCell: ChatViewCell, Reusable {
     static let textAttributes: [NSAttributedStringKey: Any] = [
@@ -22,9 +24,11 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private let stackView = UIStackView()
     private var pinToLeadingConstraint: NSLayoutConstraint?
     private var pinToTrailingConstraint: NSLayoutConstraint?
+    private var bubblePinnedToRight = MutableProperty(true)
     private let crookView = CrookView()
     private var crookViewPinToLeadingConstraint: NSLayoutConstraint?
     private var crookViewPinToTrailingConstraint: NSLayoutConstraint?
+    private let hiddenLabel = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -86,6 +90,17 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             crookViewPinToTrailingConstraint,
             crookView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: 0)
         ])
+
+        hiddenLabel.translatesAutoresizingMaskIntoConstraints = false
+        hiddenLabel.textColor = UIColor.lightGray
+        hiddenLabel.textAlignment = .left
+        hiddenLabel.font = UIFont.systemFont(ofSize: 11)
+        contentView.addSubview(hiddenLabel)
+        self.addConstraints([
+            hiddenLabel.widthAnchor.constraint(equalToConstant: Constants.HiddenLabelWidth),
+            hiddenLabel.leadingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            hiddenLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+        ])
     }
 
     private func set(backgroundColor: UIColor) {
@@ -96,7 +111,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
 
     func configure(with content: ChatViewMessageContent) {
         let currentSenderColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
-        let otherSenderColor = UIColor(red: 229 / 255, green: 229 / 255, blue: 234 / 255, alpha: 1)
+        let otherSenderColor = UIColor(white: 0.94, alpha: 1)
         set(backgroundColor: content.isCurrentSender ? currentSenderColor : otherSenderColor)
 
         textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
@@ -115,6 +130,40 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
         self.setNeedsLayout()
         self.layoutIfNeeded()
+
+        self.bubblePinnedToRight.value = content.isCurrentSender
+
+        hiddenLabel.text = content.hiddenText
+    }
+
+    func observePanGestureState(_ signal: Signal<UIPanGestureRecognizer, NoError>) {
+        SignalProducer.combineLatest(bubblePinnedToRight.producer, SignalProducer(signal))
+            .take(until: reactive.prepareForReuse)
+            .startWithValues { [weak self] (bubblePinnedToRight, panGestureRecognizer) in
+                guard let `self` = self else { return }
+                switch panGestureRecognizer.state {
+                case .changed:
+                    let translation = panGestureRecognizer.translation(in: self)
+                    let hiddenLabelXTranslation = max(0, min(Constants.HiddenLabelWidth, translation.x / 2))
+                    let transform = CGAffineTransform(translationX: -hiddenLabelXTranslation, y: 0)
+                    self.hiddenLabel.transform = transform
+                    if bubblePinnedToRight {
+                        self.bubbleView.transform = transform
+                        self.crookView.transform = transform
+                    } else {
+                        self.bubbleView.transform = .identity
+                        self.crookView.transform = .identity
+                    }
+                case .ended:
+                    UIView.animate(withDuration: 0.2) {
+                        self.hiddenLabel.transform = .identity
+                        self.bubbleView.transform = .identity
+                        self.crookView.transform = .identity
+                    }
+                default:
+                    break
+                }
+            }
     }
 }
 
@@ -144,6 +193,7 @@ private enum Constants {
     static let MaxBubbleWidthRatio: CGFloat = 0.7
     static let BubbleTopOffset: CGFloat = 1
     static let BubbleSideOffset: CGFloat = 12
+    static let HiddenLabelWidth: CGFloat = 56
 }
 
 private class CrookView: UIView {

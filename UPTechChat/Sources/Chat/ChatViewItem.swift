@@ -13,6 +13,7 @@ struct ChatViewMessageContent {
     let body: String
     let isCurrentSender: Bool
     let isCrooked: Bool
+    let hiddenText: String
 }
 
 extension ChatViewMessageContent: Equatable {
@@ -20,7 +21,8 @@ extension ChatViewMessageContent: Equatable {
         return lhs.title == rhs.title &&
             lhs.body == rhs.body &&
             lhs.isCurrentSender == rhs.isCurrentSender &&
-            lhs.isCrooked == rhs.isCrooked
+            lhs.isCrooked == rhs.isCrooked &&
+            lhs.hiddenText == rhs.hiddenText
     }
 }
 
