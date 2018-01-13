@@ -32,6 +32,8 @@ extension ChatsView: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         let item = dataSource.items[indexPath.row]
         switch item {
+        case .loading:
+            return 80
         case .info:
             return tableView.frame.height
         case .chat:

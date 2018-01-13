@@ -38,7 +38,7 @@ final class MessagesProvider {
     func fetchMessageEntities(
         chatEntity: FirebaseEntity<Chat>,
         loadMoreMessages: Signal<Void, NoError>
-        ) -> MessagesResult {
+        ) -> LoadableProperty<[FirebaseEntity<Message>], MessagesProviderError> {
 
         let reference = database.reference(withPath: "messages/\(chatEntity.identifier)")
         let (errors, errorsObserver) = Signal<MessagesProviderError, NoError>.pipe()
@@ -173,11 +173,13 @@ final class MessagesProvider {
         let newMessages = Property<[FirebaseEntity<Message>]?>(initial: nil, then: newMessagesFlow)
 
         let messages = Property.combineLatest(paginatedMessages, newMessages)
-            .map { (paginatedMessagesOrNil, newMessagesOrNil) -> [FirebaseEntity<Message>] in
-                return (paginatedMessagesOrNil ?? []) + (newMessagesOrNil ?? [])
+            .map { (paginatedMessagesOrNil, newMessagesOrNil) -> [FirebaseEntity<Message>]? in
+                return paginatedMessagesOrNil.map { paginatedMessages in
+                    return paginatedMessages + (newMessagesOrNil ?? [])
+                }
             }
 
-        return MessagesResult(messages: messages, isLoadingMore: isLoadingMore.map { $0 }, errors: errors)
+        return LoadableProperty(property: messages, isLoading: isLoadingMore.map { $0 }, errors: errors)
     }
 
     func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, MessagesProviderError> {

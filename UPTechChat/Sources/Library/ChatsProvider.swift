@@ -105,7 +105,7 @@ final class ChatsProvider {
         }
     }
 
-    func fetchChats(reload: Signal<Void, NoError>) -> Property<[FirebaseEntity<Chat>]> {
+    func fetchChats(reload: Signal<Void, NoError>) -> LoadableProperty<[FirebaseEntity<Chat>], ChatsProviderError> {
         func fetchChatIdentifiers() -> SignalProducer<[String], NoError> {
             return .init { () -> [String] in
                 let mutableArray = self.userDefaults.mutableArrayValue(forKey: ChatsKey)
@@ -131,26 +131,41 @@ final class ChatsProvider {
             }
         }
 
+        let (errors, errorsObserver) = Signal<ChatsProviderError, NoError>.pipe()
+
+        let isLoading = MutableProperty(false)
+
         let chatsFlow = SignalProducer(reload)
             .prefix(value: ())
-            .flatMap(.latest, fetchChatIdentifiers)
-            .flatMap(.latest) { chatIdentifiers -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
-                guard chatIdentifiers.isEmpty == false else {
-                    return .init(value: [])
-                }
+            .withLatest(from: isLoading)
+            .filter { !$1 }
+            .flatMap(.latest) { _ -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
+                isLoading.value = true
+                return fetchChatIdentifiers()
+                    .flatMap(.latest) { chatIdentifiers -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
+                        guard chatIdentifiers.isEmpty == false else {
+                            return .init(value: [])
+                        }
 
-                let deferredChatEntities = chatIdentifiers
-                    .map { chatIdentifier -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
-                        return observeFirebaseChatEntity(identifier: chatIdentifier)
-                            .map { [$0] }
-                            .flatMapError { _ in SignalProducer(value: []) }
+                        let deferredChatEntities = chatIdentifiers
+                            .map { chatIdentifier -> SignalProducer<[FirebaseEntity<Chat>], NoError> in
+                                return observeFirebaseChatEntity(identifier: chatIdentifier)
+                                    .map { [$0] }
+                                    .flatMapError { error in
+                                        errorsObserver.send(value: error)
+                                        return SignalProducer(value: [])
+                                }
+                            }
+
+                        return SignalProducer.combineLatest(deferredChatEntities)
+                            .map { $0.flatMap { $0 } }
                     }
-
-                return SignalProducer.zip(deferredChatEntities)
-                    .map { $0.flatMap { $0 } }
+                    .on(value: { _ in isLoading.value = false })
             }
 
-        return Property(initial: [], then: chatsFlow)
+        let chats = Property<[FirebaseEntity<Chat>]?>(initial: nil, then: chatsFlow)
+
+        return LoadableProperty(property: chats, isLoading: isLoading.map { $0 }, errors: errors)
     }
 
     private func chatReference(identifier: String) -> DatabaseReference {

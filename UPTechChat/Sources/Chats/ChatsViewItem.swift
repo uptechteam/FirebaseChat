@@ -9,6 +9,7 @@
 import UIKit
 
 enum ChatsViewItem {
+    case loading
     case chat(title: String, subtitle: String)
     case info(title: String, message: String)
 }

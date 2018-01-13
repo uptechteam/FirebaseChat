@@ -27,34 +27,41 @@ final class ChatsViewModel {
         let (leaveItemIndex, leaveItemIndexObserver) = Signal<Int, NoError>.pipe()
         let (createChat, createChatObserver) = Signal<String, NoError>.pipe()
 
+        let isCreatingChat = MutableProperty(false)
         let createdChatIdentifier = createChat
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { $0.isEmpty == false }
-            .flatMap(.concat) { chatName in
+            .flatMap(.concat) { chatName -> SignalProducer<FirebaseEntity<Chat>, NoError> in
+                isCreatingChat.value = true
                 return chatsProvider.createChat(name: chatName)
                     .flatMapError { error -> SignalProducer<FirebaseEntity<Chat>, NoError> in
                         chatsProviderErrorsObserver.send(value: error)
                         return .empty
-                }
+                    }
+                    .on(completed: { isCreatingChat.value = false })
             }
             .map { $0.identifier }
 
+        let isJoiningChat = MutableProperty(false)
         let joinedChat = Signal.merge([joinChatIdentifier, createdChatIdentifier])
             .flatMap(.concat) { identifier -> SignalProducer<Void, NoError> in
+                isJoiningChat.value = true
                 return chatsProvider.joinChat(identifier: identifier)
                     .flatMapError { error in
                         chatsProviderErrorsObserver.send(value: error)
                         return .empty
                     }
+                    .on(completed: { isJoiningChat.value = false })
             }
 
         let (_leftChat, _leftChatObserver) = Signal<Void, NoError>.pipe()
 
-        let chatEntities = chatsProvider.fetchChats(reload: Signal.merge([joinedChat, _leftChat]))
+        let chatsLoadableProperty = chatsProvider.fetchChats(reload: Signal.merge([joinedChat, _leftChat]))
+        let chatEntities = chatsLoadableProperty.property
 
         let leftChat = leaveItemIndex
             .withLatest(from: chatEntities.producer)
-            .map { $1[$0] }
+            .filterMap { $1?[$0] }
             .flatMap(.concat) { chatEntity in
                 return chatsProvider.leaveChat(chatEntity: chatEntity)
                     .flatMapError { error -> SignalProducer<Void, NoError> in
@@ -64,17 +71,33 @@ final class ChatsViewModel {
             }
             .on(value: _leftChatObserver.send)
 
-        let items = chatEntities
-            .map { chatEntities -> [ChatsViewItem] in
-                guard chatEntities.isEmpty == false else {
-                    return [ChatsViewItem.info(title: "No chats here yet", message: "In order to start a conversation you need to create a chat or ask your friend to send you a link")]
-                }
+        let isLoadingFlow = Property.combineLatest(isCreatingChat.map { $0 }, isJoiningChat.map { $0 }, chatsLoadableProperty.isLoading).producer
+            .map { $0 || $1 || $2 }
+            .skipRepeats()
+            .throttle(0.1, on: QueueScheduler.main)
+        let isLoading = Property(initial: false, then: isLoadingFlow)
 
-                return chatEntities.map { chatEntity -> ChatsViewItem in
-                    let title = chatEntity.model.name
-                    let subtitle = chatEntity.model.lastMessage.map { "\($0.sender.name): \($0.body)" } ?? "No messages yet"
-                    return .chat(title: title, subtitle: subtitle)
-                }
+        let itemsFlow = Property.combineLatest(chatEntities, isLoading).producer
+            .map { (chatEntities, isLoading) -> [ChatsViewItem] in
+                let chatItems: [ChatsViewItem] = {
+                    guard let chatEntities = chatEntities else {
+                        return []
+                    }
+
+                    if chatEntities.isEmpty && isLoading == false {
+                        return [ChatsViewItem.info(title: "No chats here yet", message: "In order to start a conversation you need to create a chat or ask your friend to send you a link")]
+                    }
+
+                    return chatEntities.map { chatEntity -> ChatsViewItem in
+                        let title = chatEntity.model.name
+                        let subtitle = chatEntity.model.lastMessage.map { "\($0.sender.name): \($0.body)" } ?? "No messages yet"
+                        return .chat(title: title, subtitle: subtitle)
+                    }
+                }()
+
+                let loadingItems: [ChatsViewItem] = isLoading ? [.loading] : []
+
+                return loadingItems + chatItems
             }
 
         let showErrorAlert = chatsProviderErrors
@@ -96,14 +119,14 @@ final class ChatsViewModel {
         let showChat = selectedItemIndex
             .withLatest(from: chatEntities.producer)
             .filterMap { (index, chatEntities) -> FirebaseEntity<Chat>? in
-                guard chatEntities.isEmpty == false else {
+                guard let chatEntities = chatEntities, chatEntities.isEmpty == false else {
                     return nil
                 }
 
                 return chatEntities[index]
             }
 
-        self.items = items
+        self.items = Property(initial: [], then: itemsFlow)
         self.showErrorAlert = showErrorAlert
         self.showChat = showChat
         self.leftChat = leftChat

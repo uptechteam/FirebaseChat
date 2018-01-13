@@ -47,36 +47,40 @@ final class ChatViewModel {
 
         let currentUser = userProvider.currentUser
 
-        let messagesResult = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
+        let messagesLoadableProperty = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
 
-        let itemsProducer = Property.combineLatest(messagesResult.messages, currentUser, messagesResult.isLoadingMore).producer
+        let itemsProducer = Property.combineLatest(messagesLoadableProperty.property, currentUser, messagesLoadableProperty.isLoading).producer
             .observe(on: scheduler)
             .map { (messages, currentUser, isLoadingMore) -> [ChatViewItem] in
-                if messages.isEmpty && isLoadingMore == false {
-                    return [.header("No messages yet")]
-                }
-
-                let splittedMessages = splitMessages(messages)
-
-                let messageItems = splittedMessages.flatMap { dateGroup -> [ChatViewItem] in
-                    let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [ChatViewItem] in
-                        return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> ChatViewItem in
-                            let isCurrentSender = message.model.sender == currentUser
-                            let content = ChatViewMessageContent(
-                                title: !isCurrentSender && senderGroupIndex == 0 ? message.model.sender.name : nil,
-                                body: message.model.body,
-                                isCurrentSender: isCurrentSender,
-                                isCrooked: senderGroupIndex == senderGroup.messages.count - 1
-                            )
-
-                            return .message(content)
-                        }
+                let messageItems: [ChatViewItem] = {
+                    guard let messages = messages else {
+                        return []
                     }
 
-                    let headerItem = ChatViewItem.header(dateFormatter.string(from: dateGroup.date))
+                    guard messages.isEmpty == false else {
+                        return [.header("No messages yet")]
+                    }
 
-                    return [headerItem] + messageItems
-                }
+                    return splitMessages(messages).flatMap { dateGroup -> [ChatViewItem] in
+                        let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [ChatViewItem] in
+                            return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> ChatViewItem in
+                                let isCurrentSender = message.model.sender == currentUser
+                                let content = ChatViewMessageContent(
+                                    title: !isCurrentSender && senderGroupIndex == 0 ? message.model.sender.name : nil,
+                                    body: message.model.body,
+                                    isCurrentSender: isCurrentSender,
+                                    isCrooked: senderGroupIndex == senderGroup.messages.count - 1
+                                )
+
+                                return .message(content)
+                            }
+                        }
+
+                        let headerItem = ChatViewItem.header(dateFormatter.string(from: dateGroup.date))
+
+                        return [headerItem] + messageItems
+                    }
+                }()
 
                 let loadingItem: [ChatViewItem] = isLoadingMore ? [ChatViewItem.loading] : []
 
