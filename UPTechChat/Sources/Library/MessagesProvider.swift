@@ -181,18 +181,38 @@ final class MessagesProvider {
     }
 
     func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, MessagesProviderError> {
-        let reference = self.database.reference(withPath: "messages/\(chatEntity.identifier)")
-        return SignalProducer { observer, lifetime in
-            let mapper = Mapper<Message>()
-            let json = mapper.toJSON(message)
-            reference.childByAutoId().setValue(json) { (error, reference) in
-                if let error = error {
-                    observer.send(error: .wrapped(error))
-                } else {
-                    observer.send(value: ())
-                    observer.sendCompleted()
+        func updateChatEntity() -> SignalProducer<Void, MessagesProviderError> {
+            let reference = self.database.reference(withPath: "chats/\(chatEntity.identifier)/lastMessage")
+            return SignalProducer { observer, lifetime in
+                let json = Mapper<Message>().toJSON(message)
+                reference.setValue(json) { error, _ in
+                    if let error = error {
+                        observer.send(error: .wrapped(error))
+                    } else {
+                        observer.send(value: ())
+                        observer.sendCompleted()
+                    }
                 }
             }
         }
+
+        func postMessage() -> SignalProducer<Void, MessagesProviderError> {
+            let reference = self.database.reference(withPath: "messages/\(chatEntity.identifier)")
+            return SignalProducer { observer, lifetime in
+                let mapper = Mapper<Message>()
+                let json = mapper.toJSON(message)
+                reference.childByAutoId().setValue(json) { (error, reference) in
+                    if let error = error {
+                        observer.send(error: .wrapped(error))
+                    } else {
+                        observer.send(value: ())
+                        observer.sendCompleted()
+                    }
+                }
+            }
+        }
+
+        return SignalProducer.zip(updateChatEntity(), postMessage())
+            .map { _ in () }
     }
 }

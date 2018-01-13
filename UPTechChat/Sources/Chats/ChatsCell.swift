@@ -31,7 +31,7 @@ final class ChatsCell: UITableViewCell, Reusable {
         contentView.addConstraints([
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: 16)
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
 
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -41,7 +41,7 @@ final class ChatsCell: UITableViewCell, Reusable {
         contentView.addConstraints([
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             subtitleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            subtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: 16)
+            subtitleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
         ])
     }
 
