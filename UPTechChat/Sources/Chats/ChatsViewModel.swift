@@ -16,13 +16,27 @@ final class ChatsViewModel {
 
     let addChatIdentifierObserver: Signal<String, NoError>.Observer
     let selectedItemIndexObserver: Signal<Int, NoError>.Observer
+    let createChatObserver: Signal<String, NoError>.Observer
 
     init(chatsProvider: ChatsProvider = .shared) {
         let (addChatIdentifier, addChatIdentifierObserver) = Signal<String, NoError>.pipe()
         let (chatsProviderErrors, chatsProviderErrorsObserver) = Signal<ChatsProviderError, NoError>.pipe()
         let (selectedItemIndex, selectedItemIndexObserver) = Signal<Int, NoError>.pipe()
+        let (createChat, createChatObserver) = Signal<String, NoError>.pipe()
 
-        let chatAdded = addChatIdentifier
+        let createdChatIdentifier = createChat
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+            .flatMap(.concat) { chatName in
+                return chatsProvider.createChat(name: chatName)
+                    .flatMapError { error -> SignalProducer<FirebaseEntity<Chat>, NoError> in
+                        chatsProviderErrorsObserver.send(value: error)
+                        return .empty
+                }
+            }
+            .map { $0.identifier }
+
+        let chatAdded = Signal.merge([addChatIdentifier, createdChatIdentifier])
             .flatMap(.concat) { identifier -> SignalProducer<Void, NoError> in
                 return chatsProvider.addChat(identifier: identifier)
                     .flatMapError { error in
@@ -67,5 +81,6 @@ final class ChatsViewModel {
         self.showChat = showChat
         self.addChatIdentifierObserver = addChatIdentifierObserver
         self.selectedItemIndexObserver = selectedItemIndexObserver
+        self.createChatObserver = createChatObserver
     }
 }

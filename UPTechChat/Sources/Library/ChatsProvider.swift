@@ -30,6 +30,22 @@ final class ChatsProvider {
         self.userDefaults = userDefaults
     }
 
+    func createChat(name: String) -> SignalProducer<FirebaseEntity<Chat>, ChatsProviderError> {
+        return .init { observer, lifetime in
+            let reference = self.database.reference(withPath: "chats").childByAutoId()
+            let model = Chat(name: name, lastMessage: nil)
+            reference.setValue(model.toJSON(), withCompletionBlock: { (error, reference) in
+                if let error = error {
+                    observer.send(error: .wrapped(error))
+                } else {
+                    let entity = FirebaseEntity<Chat>(identifier: reference.key, model: model)
+                    observer.send(value: entity)
+                    observer.sendCompleted()
+                }
+            })
+        }
+    }
+
     func addChat(identifier: String) -> SignalProducer<Void, ChatsProviderError> {
         func isIdentifierValid() -> SignalProducer<Bool, NoError> {
             let reference = chatReference(identifier: identifier)

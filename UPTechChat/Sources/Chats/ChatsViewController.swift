@@ -32,7 +32,10 @@ final class ChatsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
         self.title = "Chats"
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .compose, target: self, action: #selector(ChatsViewController.newChatBarButtonItemPressed(_:)))
+
         bindViewModel()
     }
 
@@ -52,5 +55,18 @@ final class ChatsViewController: UIViewController {
                 let chatViewController = ChatViewController(chatEntity: chatEntity)
                 self?.navigationController?.pushViewController(chatViewController, animated: true)
             }
+    }
+
+    @objc private func newChatBarButtonItemPressed(_ barButtonItem: UIBarButtonItem) {
+        let alertController = UIAlertController(title: "New chat", message: "Please enter the name of new chat", preferredStyle: .alert)
+        alertController.addTextField { (textField) in
+            textField.placeholder = "Chat Name"
+        }
+        alertController.addAction(UIAlertAction(title: "Create", style: .default, handler: { (action) in
+            let chatName = alertController.textFields?.first?.text ?? ""
+            self.viewModel.createChatObserver.send(value: chatName)
+        }))
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+        self.present(alertController, animated: true, completion: nil)
     }
 }
