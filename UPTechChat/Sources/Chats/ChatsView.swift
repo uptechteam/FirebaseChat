@@ -47,17 +47,22 @@ extension ChatsView: UITableViewDelegate {
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         let item = dataSource.items[indexPath.row]
         guard case .chat = item else {
-            return nil
+            return UISwipeActionsConfiguration(actions: [])
         }
 
         let leaveAction = UIContextualAction(style: .normal, title: "Leave") { (_, _, completionHandler) in
             self.leaveItemIndexObserver.send(value: indexPath.row)
             completionHandler(true)
         }
-
         leaveAction.backgroundColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
 
-        return UISwipeActionsConfiguration(actions: [leaveAction])
+        let configuration = UISwipeActionsConfiguration(actions: [leaveAction])
+        configuration.performsFirstActionWithFullSwipe = false
+        return configuration
+    }
+
+    func tableView(_ tableView: UITableView, leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        return nil
     }
 }
 
