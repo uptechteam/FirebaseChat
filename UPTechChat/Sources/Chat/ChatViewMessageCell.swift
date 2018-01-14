@@ -102,7 +102,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         hiddenLabel.translatesAutoresizingMaskIntoConstraints = false
         hiddenLabel.textColor = UIColor.lightGray
         hiddenLabel.textAlignment = .left
-        hiddenLabel.font = UIFont.systemFont(ofSize: 11)
+        hiddenLabel.font = UIFont.systemFont(ofSize: 12)
         contentView.addSubview(hiddenLabel)
         self.addConstraints([
             hiddenLabel.widthAnchor.constraint(equalToConstant: Constants.HiddenLabelWidth),
@@ -143,7 +143,8 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             .startWithValues { [weak self] content in
                 guard let `self` = self else { return }
 
-                self.set(backgroundColor: content.isCurrentSender ? Constants.CurrentSenderBubbleColor : Constants.OtherSenderBubbleColor)
+                self.bubbleView.image = content.isCurrentSender ? Constants.CurrentSenderBubbleBackgroundImage : Constants.OtherSenderBubbleBackgroundImage
+                self.crookView.color = content.isCurrentSender ? Constants.CurrentSenderBubbleColor : Constants.OtherSenderBubbleColor
 
                 self.textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
                 self.textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
@@ -183,7 +184,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                 switch panGestureRecognizer.state {
                 case .changed:
                     let translation = panGestureRecognizer.translation(in: self)
-                    let hiddenLabelXTranslation = max(0, min(Constants.HiddenLabelWidth, translation.x / 2))
+                    let hiddenLabelXTranslation = max(0, min(Constants.HiddenLabelWidth, translation.x / 3))
                     let transform = CGAffineTransform(translationX: -hiddenLabelXTranslation, y: 0)
 
                     self.hiddenLabel.transform = transform
@@ -201,12 +202,6 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                     break
                 }
         }
-    }
-
-    private func set(backgroundColor: UIColor) {
-        let cornerRadius = (Constants.FontSize + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom) / 2
-        bubbleView.image = UIImage.cornerRoundedImage(color: backgroundColor, cornerRadius: cornerRadius)
-        crookView.color = backgroundColor
     }
 
     func configure(content: ChatViewMessageContent, horizontalPanGestureState: Signal<UIPanGestureRecognizer, NoError>) {
@@ -252,6 +247,8 @@ extension ChatViewMessageCell {
 private enum Constants {
     static let CurrentSenderBubbleColor: UIColor = .init(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
     static let OtherSenderBubbleColor: UIColor = .init(white: 0.94, alpha: 1)
+    static let CurrentSenderBubbleBackgroundImage: UIImage = UIImage.cornerRoundedImage(color: Constants.CurrentSenderBubbleColor, cornerRadius: Constants.BubbleCornerRadius)!
+    static let OtherSenderBubbleBackgroundImage: UIImage = UIImage.cornerRoundedImage(color: Constants.OtherSenderBubbleColor, cornerRadius: Constants.BubbleCornerRadius)!
     static let FontSize: CGFloat = 17
     static let TitleFontSize: CGFloat = 14
     static let StatusFontSize: CGFloat = 11
@@ -259,7 +256,8 @@ private enum Constants {
     static let MaxBubbleWidthRatio: CGFloat = 0.7
     static let BubbleTopOffset: CGFloat = 1
     static let BubbleSideOffset: CGFloat = 12
-    static let HiddenLabelWidth: CGFloat = 56
+    static let BubbleCornerRadius: CGFloat = (FontSize + BubbleInsets.top + BubbleInsets.bottom) / 2
+    static let HiddenLabelWidth: CGFloat = 60
 }
 
 private class CrookView: UIView {

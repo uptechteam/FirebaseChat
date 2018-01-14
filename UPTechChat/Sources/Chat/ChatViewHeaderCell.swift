@@ -32,6 +32,6 @@ final class ChatViewHeaderCell: ChatViewCell, Reusable {
     }
 
     func configure(with text: String) {
-        textLabel.attributedText = NSAttributedString(string: text, attributes: [NSAttributedStringKey.font: UIFont.systemFont(ofSize: 11)])
+        textLabel.attributedText = NSAttributedString(string: text, attributes: [NSAttributedStringKey.font: UIFont.systemFont(ofSize: 12)])
     }
 }
