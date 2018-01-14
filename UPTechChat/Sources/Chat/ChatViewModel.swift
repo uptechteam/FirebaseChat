@@ -27,6 +27,7 @@ final class ChatViewModel {
     let title: Property<String>
     let clearInputText: Signal<Void, NoError>
     let messageSendRetried: Signal<Void, NoError>
+    let showLastMessage: Signal<Void, NoError>
     let showUrlShareMenu: Signal<URL, NoError>
 
     let inputTextChangesObserver: Signal<String, NoError>.Observer
@@ -73,6 +74,10 @@ final class ChatViewModel {
         let clearInputText = localMessages
             .map { _ in () }
             .on(value: _clearInputTextObserver.send)
+
+        // Show last added message
+        let showLastMessage = localMessages
+            .map { _ in () }
 
         // Local message statuses
         let localMessageStatusesFlow = localMessages
@@ -169,6 +174,7 @@ final class ChatViewModel {
         self.title = Property(value: chatEntity.model.name)
         self.clearInputText = clearInputText
         self.messageSendRetried = messageSendRetried
+        self.showLastMessage = showLastMessage
         self.showUrlShareMenu = showUrlShareMenu
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver

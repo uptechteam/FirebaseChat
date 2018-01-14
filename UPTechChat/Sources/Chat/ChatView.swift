@@ -69,12 +69,12 @@ final class ChatView: UIView {
             .map(Optional.init)
             .combinePrevious(nil)
             .observeValues { [weak self] (previousContext, context) in
-                guard let context = context else { return }
+                guard let context = context, let `self` = self else { return }
 
                 UIView.beginAnimations(nil, context: nil)
                 UIView.setAnimationCurve(context.animationCurve)
                 UIView.setAnimationDuration(context.animationDuration)
-                self?.updateContentInset(
+                self.updateContentInset(
                     previousKeyboardHeight: previousContext?.keyboardHeight ?? 0,
                     keyboardHeight: context.keyboardHeight
                 )
@@ -138,6 +138,16 @@ extension Reactive where Base: ChatView {
 
     var clearInputText: BindingTarget<Void> {
         return base.chatInputView.reactive.clearInputText
+    }
+
+    var showLastMessage: BindingTarget<Void> {
+        return BindingTarget(on: QueueScheduler.main, lifetime: self.lifetime) { [weak base] () in
+            guard let base = base else { return }
+            let contentOffset = CGPoint(x: 0, y: -base.collectionView.contentInset.top)
+            UIView.transition(with: base, duration: 0.4, options: UIViewAnimationOptions.transitionCrossDissolve, animations: {
+                base.collectionView.contentOffset = contentOffset
+            }, completion: nil)
+        }
     }
 }
 
