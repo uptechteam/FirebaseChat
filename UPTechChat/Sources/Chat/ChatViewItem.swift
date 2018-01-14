@@ -15,6 +15,7 @@ struct ChatViewMessageContent {
     let isCrooked: Bool
     let hiddenText: String
     let statusText: String?
+    let isRetryShown: Bool
 }
 
 extension ChatViewMessageContent: Equatable {
@@ -24,7 +25,8 @@ extension ChatViewMessageContent: Equatable {
             lhs.isCurrentSender == rhs.isCurrentSender &&
             lhs.isCrooked == rhs.isCrooked &&
             lhs.hiddenText == rhs.hiddenText &&
-            lhs.statusText == rhs.statusText
+            lhs.statusText == rhs.statusText &&
+            lhs.isRetryShown == rhs.isRetryShown
     }
 }
 

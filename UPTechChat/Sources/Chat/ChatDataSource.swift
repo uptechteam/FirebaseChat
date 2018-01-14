@@ -8,10 +8,13 @@
 
 import UIKit
 import Changeset
+import ReactiveSwift
+import Result
 
 final class ChatDataSource: NSObject {
     private(set) var items = [ChatViewItem]()
     private weak var collectionView: ChatCollectionView?
+    fileprivate let (retryTap, retryTapObserver) = Signal<Int, NoError>.pipe()
 
     func set(collectionView: ChatCollectionView) {
         collectionView.register(ChatViewMessageCell.self, forCellWithReuseIdentifier: ChatViewMessageCell.reuseIdentifier)
@@ -28,6 +31,15 @@ final class ChatDataSource: NSObject {
 
         DispatchQueue.main.async {
             self.collectionView?.update(with: changes)
+        }
+    }
+}
+
+extension Reactive where Base: ChatDataSource {
+    var retryTap: Signal<Int, NoError> {
+        return base.retryTap.filterMap { [weak base] index -> Int? in
+            let reversedIndex = base.map { $0.items.count - 1 - index }
+            return reversedIndex
         }
     }
 }
@@ -57,6 +69,12 @@ extension ChatDataSource: UICollectionViewDataSource {
             if let collectionView = collectionView as? ChatCollectionView {
                 cell.configure(content: content, horizontalPanGestureState: collectionView.horizontalPanGestureRecognizer.reactive.stateChanged)
             }
+
+            cell.reactive.retryButtonTap
+                .take(until: cell.reactive.prepareForReuse)
+                .map { indexPath.row }
+                .observeValues(retryTapObserver.send)
+
             return cell
         }
     }

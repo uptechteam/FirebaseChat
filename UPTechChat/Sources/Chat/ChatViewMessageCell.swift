@@ -32,6 +32,9 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private var crookViewPinToTrailingConstraint: NSLayoutConstraint?
     private let hiddenLabel = UILabel()
     private let statusLabel = UILabel()
+    fileprivate let retryButton = UIButton(type: UIButtonType.infoLight)
+    private var retryButtonPinToTrailingConstraint: NSLayoutConstraint?
+    private var retryButtonPinToLeadingConstraint: NSLayoutConstraint?
 
     private let content = MutableProperty<ChatViewMessageContent?>(nil)
     private let horizontalPanGestureState = MutableProperty<UIPanGestureRecognizer?>(nil)
@@ -64,7 +67,6 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         titleLabel.textColor = UIColor(red: 253 / 255, green: 145 / 255, blue: 80 / 255, alpha: 1)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.numberOfLines = 1
-        titleLabel.attributedText = NSAttributedString(string: "Evgeny Matviyenko", attributes: ChatViewMessageCell.titleAttributes)
 
         textLabel.translatesAutoresizingMaskIntoConstraints = false
         textLabel.numberOfLines = 0
@@ -118,6 +120,23 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             statusLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
         ])
 
+        retryButton.translatesAutoresizingMaskIntoConstraints = false
+        retryButton.tintColor = UIColor.red
+        contentView.addSubview(retryButton)
+        let retryButtonPinToTrailingConstraint = retryButton.trailingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 0)
+        retryButtonPinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
+        self.retryButtonPinToTrailingConstraint = retryButtonPinToTrailingConstraint
+        let retryButtonPinToLeadingConstraint = retryButton.leadingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: 0)
+        retryButtonPinToLeadingConstraint.priority = UILayoutPriority.defaultLow
+        self.retryButtonPinToLeadingConstraint = retryButtonPinToLeadingConstraint
+        self.addConstraints([
+            retryButtonPinToTrailingConstraint,
+            retryButtonPinToLeadingConstraint,
+            retryButton.widthAnchor.constraint(equalToConstant: 44),
+            retryButton.heightAnchor.constraint(equalToConstant: 40),
+            retryButton.centerYAnchor.constraint(equalTo: bubbleView.centerYAnchor)
+        ])
+
         content.producer
             .filterMap { $0 }
             .take(duringLifetimeOf: self)
@@ -137,15 +156,20 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                 let pinToLeadingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
                 self.pinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
                 self.crookViewPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
+                self.retryButtonPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
                 let pinToTrailingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
                 self.pinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
                 self.crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
+                self.retryButtonPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
                 self.setNeedsLayout()
                 self.layoutIfNeeded()
 
                 self.hiddenLabel.text = content.hiddenText
 
                 self.statusLabel.attributedText = NSAttributedString(string: content.statusText ?? "", attributes: ChatViewMessageCell.statusAttributes)
+                self.statusLabel.textAlignment = content.isCurrentSender ? .right : .left
+
+                self.retryButton.isHidden = !content.isRetryShown
         }
 
         Signal.combineLatest(
@@ -165,11 +189,13 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                     self.hiddenLabel.transform = transform
                     self.bubbleView.transform = content.isCurrentSender ? transform : .identity
                     self.crookView.transform = content.isCurrentSender ? transform : .identity
+                    self.retryButton.transform = content.isCurrentSender ? transform : .identity
                 case .ended:
-                    UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
+                    UIView.animate(withDuration: 0.35, delay: 0, options: .curveEaseInOut, animations: {
                         self.hiddenLabel.transform = .identity
                         self.bubbleView.transform = .identity
                         self.crookView.transform = .identity
+                        self.retryButton.transform = .identity
                     }, completion: nil)
                 default:
                     break
@@ -188,6 +214,13 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
 
         self.horizontalPanGestureState <~ horizontalPanGestureState
             .take(until: reactive.prepareForReuse)
+    }
+}
+
+extension Reactive where Base: ChatViewMessageCell {
+    var retryButtonTap: Signal<Void, NoError> {
+        return base.retryButton.reactive.controlEvents(.touchUpInside)
+            .map { _ in () }
     }
 }
 

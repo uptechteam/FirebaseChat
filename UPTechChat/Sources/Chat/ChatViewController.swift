@@ -55,6 +55,10 @@ final class ChatViewController: UIViewController {
 
         chatView.reactive.clearInputText <~ viewModel.clearInputText
 
+        viewModel.messageSendRetried
+            .take(duringLifetimeOf: self)
+            .observeValues { }
+
         viewModel.showUrlShareMenu
             .take(duringLifetimeOf: self)
             .observeValues { [weak self] url in
@@ -71,6 +75,9 @@ final class ChatViewController: UIViewController {
 
         chatView.reactive.scrolledToTop
             .observe(viewModel.scrolledToTopObserver)
+
+        chatView.reactive.retryTap
+            .observe(viewModel.retryTapObserver)
     }
 
     @objc private func shareBarButtonItemPressed(_ barButtonItem: UIBarButtonItem) {

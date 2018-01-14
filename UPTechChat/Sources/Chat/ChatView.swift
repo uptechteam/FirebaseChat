@@ -32,6 +32,7 @@ final class ChatView: UIView {
         collectionView.alwaysBounceVertical = true
         collectionView.keyboardDismissMode = .none
         collectionView.showsVerticalScrollIndicator = false
+        collectionView.allowsSelection = true
         dataSource.set(collectionView: collectionView)
         updateContentInset(keyboardHeight: 0)
 
@@ -95,6 +96,10 @@ extension Reactive where Base: ChatView {
             }
             .map { _ in () }
             .throttle(0.1, on: QueueScheduler.main)
+    }
+
+    var retryTap: Signal<Int, NoError> {
+        return base.dataSource.reactive.retryTap
     }
 
     var items: BindingTarget<[ChatViewItem]> {

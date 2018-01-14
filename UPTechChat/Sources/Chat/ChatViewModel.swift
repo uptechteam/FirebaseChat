@@ -26,12 +26,14 @@ final class ChatViewModel {
     let items: Property<[ChatViewItem]>
     let title: Property<String>
     let clearInputText: Signal<Void, NoError>
+    let messageSendRetried: Signal<Void, NoError>
     let showUrlShareMenu: Signal<URL, NoError>
 
     let inputTextChangesObserver: Signal<String, NoError>.Observer
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
     let scrolledToTopObserver: Signal<Void, NoError>.Observer
     let shareMenuButtonTapObserver: Signal<Void, NoError>.Observer
+    let retryTapObserver: Signal<Int, NoError>.Observer
 
     init(messagesProvider: MessagesProvider = .shared,
          userProvider: UserProvider = .shared,
@@ -41,6 +43,7 @@ final class ChatViewModel {
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
         let (shareMenuButtonTap, shareMenuButtonTapObserver) = Signal<Void, NoError>.pipe()
+        let (retryTap, retryTapObserver) = Signal<Int, NoError>.pipe()
 
         let (_clearInputText, _clearInputTextObserver) = Signal<Void, NoError>.pipe()
         let inputText = Property<String>(
@@ -54,13 +57,17 @@ final class ChatViewModel {
         let currentUser = userProvider.currentUser
 
         // All messages that are already sent or will be sent
-        let localMessages = sendButtonTap
+        let newlocalMessages = sendButtonTap
             .withLatest(from: inputText.producer)
             .map { $1 }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .withLatest(from: currentUser.producer)
             .map { Message(body: $0, date: Date(), sender: $1) }
+
+        let (retriedLocalMessages, retriedLocalMessagesObserver) = Signal<Message, NoError>.pipe()
+
+        let localMessages = Signal.merge([newlocalMessages, retriedLocalMessages])
 
         // Clear input text after adding new messages
         let clearInputText = localMessages
@@ -126,27 +133,48 @@ final class ChatViewModel {
                 return allMessages
             }
 
-        let itemsProducer = SignalProducer.combineLatest(
+        let internalLayoutProducer = SignalProducer.combineLatest(
             allMessages.producer,
             messagesLoadableProperty.isLoading.producer,
             currentUser.producer
         )
             .throttle(0.01, on: scheduler)
-            .map(makeViewItems)
+            .map(makeInternalLayout)
+        let internalLayout = Property(initial: [], then: internalLayoutProducer)
+
+        let messageSendRetried = retryTap
+            .withLatest(from: internalLayout.producer)
+            .filterMap { (index, layout) -> Message? in
+                let layoutItem = layout[index]
+
+                switch layoutItem {
+                case .message(let message, _, _, _):
+                    return message.model
+                default:
+                    return nil
+                }
+            }
+            .on(value: retriedLocalMessagesObserver.send)
+            .map { _ in () }
+
+        let viewLayout = internalLayout
+            .map(makeViewLayout)
 
         let showUrlShareMenu = shareMenuButtonTap
             .filterMap { () -> URL? in
                 return URL(string: "uptechchat://join/\(chatEntity.identifier)")
             }
 
-        self.items = Property(initial: [], then: itemsProducer)
+        self.items = viewLayout
         self.title = Property(value: chatEntity.model.name)
         self.clearInputText = clearInputText
+        self.messageSendRetried = messageSendRetried
         self.showUrlShareMenu = showUrlShareMenu
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver
         self.scrolledToTopObserver = scrolledToTopObserver
         self.shareMenuButtonTapObserver = shareMenuButtonTapObserver
+        self.retryTapObserver = retryTapObserver
     }
 }
 
@@ -178,7 +206,14 @@ private enum InternalMessage {
     }
 }
 
-private func makeViewItems(internalMessages: [InternalMessage], isLoading: Bool, currentUser: User) -> [ChatViewItem] {
+private enum InternalLayoutItem {
+    case loading
+    case dateHeader(Date)
+    case noMessagesHeader
+    case message(message: InternalMessage, isCurrentSender: Bool, isStartOfGroup: Bool, isEndOfGroup: Bool)
+}
+
+private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: Bool, currentUser: User) -> [InternalLayoutItem] {
     struct DateGroup {
         let date: Date
         var senderGroups: [SenderGroup]
@@ -221,43 +256,61 @@ private func makeViewItems(internalMessages: [InternalMessage], isLoading: Bool,
         return dateGroups
     }
 
-
-    let messageItems: [ChatViewItem] = {
-        guard internalMessages.isEmpty == false else {
-            return [.header("No messages yet")]
+    let messageItems: [InternalLayoutItem] = {
+        if internalMessages.isEmpty && isLoading == false {
+            return [.noMessagesHeader]
         }
 
-        return splitMessages(internalMessages).flatMap { dateGroup -> [ChatViewItem] in
-            let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [ChatViewItem] in
-                return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> ChatViewItem in
-                    let isCurrentSender = message.model.sender == currentUser
-                    let statusText: String? = {
-                        if case .local(_, let status) = message, case .failed = status {
-                            return "Not delivered"
-                        }
-
-                        return nil
-                    }()
-                    let content = ChatViewMessageContent(
-                        title: !isCurrentSender && senderGroupIndex == 0 ? message.model.sender.name : nil,
-                        body: message.model.body,
-                        isCurrentSender: isCurrentSender,
-                        isCrooked: senderGroupIndex == senderGroup.messages.count - 1,
-                        hiddenText: preciseTimeDateFormatter.string(from: message.model.date),
-                        statusText: statusText
+        return splitMessages(internalMessages).flatMap { dateGroup -> [InternalLayoutItem] in
+            let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [InternalLayoutItem] in
+                return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> InternalLayoutItem in
+                    return InternalLayoutItem.message(
+                        message: message,
+                        isCurrentSender: message.model.sender == currentUser,
+                        isStartOfGroup: senderGroupIndex == 0,
+                        isEndOfGroup: senderGroupIndex == senderGroup.messages.count - 1
                     )
-
-                    return .message(content)
                 }
             }
 
-            let headerItem = ChatViewItem.header(dateFormatter.string(from: dateGroup.date))
+            let headerItem = InternalLayoutItem.dateHeader(dateGroup.date)
 
             return [headerItem] + messageItems
         }
     }()
 
-    let loadingItem: [ChatViewItem] = isLoading ? [.loading] : []
+    let loadingItem: [InternalLayoutItem] = isLoading ? [.loading] : []
 
     return loadingItem + messageItems
+}
+
+private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewItem] {
+    return internalLayout.map { internalLayoutItem -> ChatViewItem in
+        switch internalLayoutItem {
+        case .loading:
+            return .loading
+        case .dateHeader(let date):
+            return .header(dateFormatter.string(from: date))
+        case .noMessagesHeader:
+            return .header("No messages yet")
+        case let .message(message, isCurrentSender, isStartOfGroup, isEndOfGroup):
+            let isFailed: Bool = {
+                if case .local(_, let status) = message, case .failed = status {
+                    return true
+                }
+
+                return false
+            }()
+            let content = ChatViewMessageContent(
+                title: isStartOfGroup && !isCurrentSender ? message.model.sender.name : nil,
+                body: message.model.body,
+                isCurrentSender: isCurrentSender,
+                isCrooked: isEndOfGroup,
+                hiddenText: preciseTimeDateFormatter.string(from: message.model.date),
+                statusText: isFailed ? "Not delivered" : nil,
+                isRetryShown: isFailed
+            )
+            return .message(content)
+        }
+    }
 }
