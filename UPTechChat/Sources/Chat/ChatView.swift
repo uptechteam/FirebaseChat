@@ -12,9 +12,6 @@ import ReactiveCocoa
 import ReactiveSwift
 
 final class ChatView: UIView {
-    var collectionViewLayout: UICollectionViewFlowLayout {
-        return collectionView.collectionViewLayout as! UICollectionViewFlowLayout
-    }
     @IBOutlet weak var collectionView: ChatCollectionView!
     @IBOutlet weak var chatInputView: ChatInputView!
     @IBOutlet weak var chatInputViewBottomConstraint: NSLayoutConstraint!
@@ -34,8 +31,9 @@ final class ChatView: UIView {
         collectionView.showsVerticalScrollIndicator = false
         collectionView.allowsSelection = true
         dataSource.set(collectionView: collectionView)
-        updateContentInset(keyboardHeight: 0)
+        updateContentInset(previousKeyboardHeight: 0, keyboardHeight: 0)
 
+        // Hiding keyboard with tap
         let tapGestureRecognizer = UITapGestureRecognizer()
         collectionView.addGestureRecognizer(tapGestureRecognizer)
         tapGestureRecognizer.reactive.stateChanged
@@ -45,39 +43,68 @@ final class ChatView: UIView {
                 self?.endEditing(false)
             }
 
+        // Observing keyboard frame to keep content visible
         let keyboardWillHide = NotificationCenter.default.reactive.notifications(forName: Notification.Name.UIKeyboardWillHide)
         let keyboardWillShow = NotificationCenter.default.reactive.notifications(forName: Notification.Name.UIKeyboardWillShow)
+
+        struct KeyboardChangeContext {
+            let animationCurve: UIViewAnimationCurve
+            let animationDuration: Double
+            let keyboardHeight: CGFloat
+        }
 
         Signal.merge([
             keyboardWillShow.map { ($0, true) },
             keyboardWillHide.map { ($0, false) }
         ])
             .take(duringLifetimeOf: self.reactive.lifetime)
-            .observeValues { [weak self] (notification, isShow) in
+            .map { (notification, isShow) -> KeyboardChangeContext in
                 let userInfo = notification.userInfo!
-                let animationCurve = UIViewAnimationCurve(rawValue: (userInfo[UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue)!
-                let animationDuration = userInfo[UIKeyboardAnimationDurationUserInfoKey] as! Double
-                let keyboardFrame = userInfo[UIKeyboardFrameEndUserInfoKey] as! CGRect
+                return KeyboardChangeContext(
+                    animationCurve: UIViewAnimationCurve(rawValue: (userInfo[UIKeyboardAnimationCurveUserInfoKey] as! NSNumber).intValue)!,
+                    animationDuration: userInfo[UIKeyboardAnimationDurationUserInfoKey] as! Double,
+                    keyboardHeight: isShow ? (userInfo[UIKeyboardFrameEndUserInfoKey] as! CGRect).height : 0
+                )
+            }
+            .map(Optional.init)
+            .combinePrevious(nil)
+            .observeValues { [weak self] (previousContext, context) in
+                guard let context = context else { return }
 
                 UIView.beginAnimations(nil, context: nil)
-                UIView.setAnimationCurve(animationCurve)
-                UIView.setAnimationDuration(animationDuration)
-                self?.updateContentInset(keyboardHeight: isShow ? keyboardFrame.height : 0)
+                UIView.setAnimationCurve(context.animationCurve)
+                UIView.setAnimationDuration(context.animationDuration)
+                self?.updateContentInset(
+                    previousKeyboardHeight: previousContext?.keyboardHeight ?? 0,
+                    keyboardHeight: context.keyboardHeight
+                )
                 UIView.commitAnimations()
             }
     }
 
-    private func updateContentInset(keyboardHeight: CGFloat) {
-        collectionView.contentInset = UIEdgeInsets(top: keyboardHeight + chatInputView.frame.height, left: 0, bottom: 0, right: 0)
-        if collectionView.contentOffset.y <= chatInputView.frame.height {
-            collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x, y: -chatInputView.frame.height - keyboardHeight)
-        }
+    private func updateContentInset(previousKeyboardHeight: CGFloat, keyboardHeight: CGFloat) {
+        // Updating contentInset can change contentOffset in some cases
+        // Prevent this to update it manually later by restoring contentOffset to previous value after changing contentInset
+        let temp = collectionView.contentOffset
+        let topContentInset = keyboardHeight + chatInputView.frame.height
+        collectionView.contentInset = UIEdgeInsets(top: topContentInset, left: 0, bottom: 0, right: 0)
+        collectionView.contentOffset = temp
+
+        // Scroll collectionView by keyboard height delta to keep content visible
+        let keyboardHeightDelta = previousKeyboardHeight - keyboardHeight
+        let minContentOffset = -topContentInset
+        let maxContentOffset = max(-topContentInset, collectionView.contentSize.height - collectionView.frame.height)
+        let newContentOffset = min(maxContentOffset, max(minContentOffset, collectionView.contentOffset.y + keyboardHeightDelta))
+        collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x, y: newContentOffset)
+
+        // Move ChatInputView to keep it above keyboard
         chatInputViewBottomConstraint.constant = keyboardHeight
         self.layoutIfNeeded()
     }
 }
 
 extension Reactive where Base: ChatView {
+    // Outputs
     var inputTextChanges: Signal<String, NoError> {
         return base.chatInputView.reactive.inputTextChanges
     }
@@ -102,6 +129,7 @@ extension Reactive where Base: ChatView {
         return base.dataSource.reactive.retryTap
     }
 
+    // Inputs
     var items: BindingTarget<[ChatViewItem]> {
         return BindingTarget(on: QueueScheduler.messages, lifetime: self.lifetime) { [weak base] items in
             base?.dataSource.load(items: items)
