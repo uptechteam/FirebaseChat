@@ -54,9 +54,8 @@ extension ChatDataSource: UICollectionViewDataSource {
             return cell
         case .message(let content):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ChatViewMessageCell.reuseIdentifier, for: indexPath) as! ChatViewMessageCell
-            cell.configure(with: content)
             if let collectionView = collectionView as? ChatCollectionView {
-                cell.observePanGestureState(collectionView.horizontalPanGestureRecognizer.reactive.stateChanged)
+                cell.configure(content: content, horizontalPanGestureState: collectionView.horizontalPanGestureRecognizer.reactive.stateChanged)
             }
             return cell
         }

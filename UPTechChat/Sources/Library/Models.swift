@@ -57,6 +57,22 @@ extension Message: ImmutableMappable {
     }
 }
 
+extension Message: Equatable {
+    static func ==(lhs: Message, rhs: Message) -> Bool {
+        return lhs.body == rhs.body &&
+            lhs.date.timeIntervalSince1970 == rhs.date.timeIntervalSince1970 &&
+            lhs.sender == rhs.sender
+    }
+}
+
+extension Message: Hashable {
+    var hashValue: Int {
+        return body.hashValue ^
+            date.timeIntervalSince1970.hashValue ^
+            sender.hashValue
+    }
+}
+
 struct User {
     let name: String
 }
@@ -79,4 +95,8 @@ extension User: Equatable {
     static func ==(lhs: User, rhs: User) -> Bool {
         return lhs.name == rhs.name
     }
+}
+
+extension User: Hashable {
+    var hashValue: Int { return name.hashValue }
 }

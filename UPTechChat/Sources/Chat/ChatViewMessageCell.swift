@@ -17,6 +17,9 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     static let titleAttributes: [NSAttributedStringKey: Any] = [
         NSAttributedStringKey.font: UIFont.systemFont(ofSize: Constants.TitleFontSize, weight: .medium)
     ]
+    static let statusAttributes: [NSAttributedStringKey: Any] = [
+        NSAttributedStringKey.font: UIFont.systemFont(ofSize: Constants.StatusFontSize, weight: .medium)
+    ]
 
     private let bubbleView = UIImageView()
     private let titleLabel = UILabel()
@@ -24,11 +27,14 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private let stackView = UIStackView()
     private var pinToLeadingConstraint: NSLayoutConstraint?
     private var pinToTrailingConstraint: NSLayoutConstraint?
-    private var bubblePinnedToRight = MutableProperty(true)
     private let crookView = CrookView()
     private var crookViewPinToLeadingConstraint: NSLayoutConstraint?
     private var crookViewPinToTrailingConstraint: NSLayoutConstraint?
     private let hiddenLabel = UILabel()
+    private let statusLabel = UILabel()
+
+    private let content = MutableProperty<ChatViewMessageContent?>(nil)
+    private let horizontalPanGestureState = MutableProperty<UIPanGestureRecognizer?>(nil)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -101,6 +107,74 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
             hiddenLabel.leadingAnchor.constraint(equalTo: contentView.trailingAnchor),
             hiddenLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
         ])
+
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.textColor = UIColor.red
+        statusLabel.textAlignment = .right
+        contentView.addSubview(statusLabel)
+        self.addConstraints([
+            statusLabel.topAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: 2),
+            statusLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset),
+            statusLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
+        ])
+
+        content.producer
+            .filterMap { $0 }
+            .take(duringLifetimeOf: self)
+            .startWithValues { [weak self] content in
+                guard let `self` = self else { return }
+
+                self.set(backgroundColor: content.isCurrentSender ? Constants.CurrentSenderBubbleColor : Constants.OtherSenderBubbleColor)
+
+                self.textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
+                self.textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
+
+                self.titleLabel.attributedText = NSAttributedString(string: content.title ?? "", attributes: ChatViewMessageCell.titleAttributes)
+
+                self.crookView.isHidden = !content.isCrooked
+                self.crookView.pointsToRight = content.isCurrentSender
+
+                let pinToLeadingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
+                self.pinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
+                self.crookViewPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
+                let pinToTrailingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
+                self.pinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
+                self.crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
+                self.setNeedsLayout()
+                self.layoutIfNeeded()
+
+                self.hiddenLabel.text = content.hiddenText
+
+                self.statusLabel.attributedText = NSAttributedString(string: content.statusText ?? "", attributes: ChatViewMessageCell.statusAttributes)
+        }
+
+        Signal.combineLatest(
+            horizontalPanGestureState.signal.filterMap { $0 },
+            content.signal.filterMap { $0 }
+            )
+            .take(duringLifetimeOf: self)
+            .observeValues { [weak self] (panGestureRecognizer, content) in
+                guard let `self` = self else { return }
+
+                switch panGestureRecognizer.state {
+                case .changed:
+                    let translation = panGestureRecognizer.translation(in: self)
+                    let hiddenLabelXTranslation = max(0, min(Constants.HiddenLabelWidth, translation.x / 2))
+                    let transform = CGAffineTransform(translationX: -hiddenLabelXTranslation, y: 0)
+
+                    self.hiddenLabel.transform = transform
+                    self.bubbleView.transform = content.isCurrentSender ? transform : .identity
+                    self.crookView.transform = content.isCurrentSender ? transform : .identity
+                case .ended:
+                    UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseInOut, animations: {
+                        self.hiddenLabel.transform = .identity
+                        self.bubbleView.transform = .identity
+                        self.crookView.transform = .identity
+                    }, completion: nil)
+                default:
+                    break
+                }
+        }
     }
 
     private func set(backgroundColor: UIColor) {
@@ -109,61 +183,11 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         crookView.color = backgroundColor
     }
 
-    func configure(with content: ChatViewMessageContent) {
-        let currentSenderColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
-        let otherSenderColor = UIColor(white: 0.94, alpha: 1)
-        set(backgroundColor: content.isCurrentSender ? currentSenderColor : otherSenderColor)
+    func configure(content: ChatViewMessageContent, horizontalPanGestureState: Signal<UIPanGestureRecognizer, NoError>) {
+        self.content.value = content
 
-        textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
-        textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
-
-        titleLabel.attributedText = NSAttributedString(string: content.title ?? "", attributes: ChatViewMessageCell.titleAttributes)
-
-        crookView.isHidden = !content.isCrooked
-        crookView.pointsToRight = content.isCurrentSender
-
-        let pinToLeadingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
-        pinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
-        crookViewPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
-        let pinToTrailingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
-        pinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
-        crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
-        self.setNeedsLayout()
-        self.layoutIfNeeded()
-
-        self.bubblePinnedToRight.value = content.isCurrentSender
-
-        hiddenLabel.text = content.hiddenText
-    }
-
-    func observePanGestureState(_ signal: Signal<UIPanGestureRecognizer, NoError>) {
-        SignalProducer.combineLatest(bubblePinnedToRight.producer, SignalProducer(signal))
+        self.horizontalPanGestureState <~ horizontalPanGestureState
             .take(until: reactive.prepareForReuse)
-            .startWithValues { [weak self] (bubblePinnedToRight, panGestureRecognizer) in
-                guard let `self` = self else { return }
-                switch panGestureRecognizer.state {
-                case .changed:
-                    let translation = panGestureRecognizer.translation(in: self)
-                    let hiddenLabelXTranslation = max(0, min(Constants.HiddenLabelWidth, translation.x / 2))
-                    let transform = CGAffineTransform(translationX: -hiddenLabelXTranslation, y: 0)
-                    self.hiddenLabel.transform = transform
-                    if bubblePinnedToRight {
-                        self.bubbleView.transform = transform
-                        self.crookView.transform = transform
-                    } else {
-                        self.bubbleView.transform = .identity
-                        self.crookView.transform = .identity
-                    }
-                case .ended:
-                    UIView.animate(withDuration: 0.2) {
-                        self.hiddenLabel.transform = .identity
-                        self.bubbleView.transform = .identity
-                        self.crookView.transform = .identity
-                    }
-                default:
-                    break
-                }
-            }
     }
 }
 
@@ -182,13 +206,22 @@ extension ChatViewMessageCell {
             return CGFloat(ceilf(Float(textBoundingRect.height)))
         }()
 
-        return titleHeight + textHeight + Constants.BubbleTopOffset + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom
+        let statusHeight: CGFloat = {
+            guard let statusText = content.statusText else { return 0 }
+            let textBoundingRect = (statusText as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: [], attributes: statusAttributes, context: nil)
+            return CGFloat(ceilf(Float(textBoundingRect.height))) + 4
+        }()
+
+        return titleHeight + textHeight + statusHeight + Constants.BubbleTopOffset + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom
     }
 }
 
 private enum Constants {
+    static let CurrentSenderBubbleColor: UIColor = .init(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
+    static let OtherSenderBubbleColor: UIColor = .init(white: 0.94, alpha: 1)
     static let FontSize: CGFloat = 17
     static let TitleFontSize: CGFloat = 14
+    static let StatusFontSize: CGFloat = 11
     static let BubbleInsets = UIEdgeInsets(top: 8, left: 14, bottom: 8, right: 14)
     static let MaxBubbleWidthRatio: CGFloat = 0.7
     static let BubbleTopOffset: CGFloat = 1
