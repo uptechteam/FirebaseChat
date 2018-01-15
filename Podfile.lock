@@ -6,6 +6,9 @@ PODS:
   - Firebase/Database (4.5.0):
     - Firebase/Core
     - FirebaseDatabase (= 4.1.0)
+  - Firebase/Storage (4.5.0):
+    - Firebase/Core
+    - FirebaseStorage (= 2.0.2)
   - FirebaseAnalytics (4.0.4):
     - FirebaseCore (~> 4.0)
     - FirebaseInstanceID (~> 2.0)
@@ -20,9 +23,14 @@ PODS:
     - leveldb-library (~> 1.18)
   - FirebaseInstanceID (2.0.8):
     - FirebaseCore (~> 4.0)
+  - FirebaseStorage (2.0.2):
+    - FirebaseAnalytics (~> 4.0)
+    - FirebaseCore (~> 4.0)
+    - GTMSessionFetcher/Core (~> 1.1)
   - GoogleToolboxForMac/Defines (2.1.3)
   - GoogleToolboxForMac/NSData+zlib (2.1.3):
     - GoogleToolboxForMac/Defines (= 2.1.3)
+  - GTMSessionFetcher/Core (1.1.12)
   - leveldb-library (1.20)
   - nanopb (0.3.8):
     - nanopb/decode (= 0.3.8)
@@ -43,6 +51,7 @@ DEPENDENCIES:
   - Changeset (~> 3.0)
   - Firebase/Core (~> 4.5.0)
   - Firebase/Database (~> 4.5.0)
+  - Firebase/Storage (~> 4.5.0)
   - ObjectMapper (~> 3.1)
   - ReactiveCocoa (~> 7.0)
   - RxCocoa (~> 4.0)
@@ -55,7 +64,9 @@ SPEC CHECKSUMS:
   FirebaseCore: da5e8e372cb6046212739a4d81e42d32c22907cc
   FirebaseDatabase: 607284a103e961d7f5863ee603cab5e85f443bd6
   FirebaseInstanceID: 81df5805a08001e69138664bdd02c6719a9ac80f
+  FirebaseStorage: 0cca42d9b889a0227c3a50121f45a4469fc9eb27
   GoogleToolboxForMac: 2501e2ad72a52eb3dfe7bd9aee7dad11b858bd20
+  GTMSessionFetcher: ebaa1f79a5366922c1735f1566901f50beba23b7
   leveldb-library: 08cba283675b7ed2d99629a4bc5fd052cd2bb6a5
   nanopb: 5601e6bca2dbf1ed831b519092ec110f66982ca3
   ObjectMapper: 20505058f54e5c3ca69e1d6de9897d152a5369a6
@@ -65,6 +76,6 @@ SPEC CHECKSUMS:
   RxCocoa: cc1fec49cdc8fabe645964de7c51c099a36c2aa8
   RxSwift: 4219941c1244c88002901bd87a69d3aea9ae71f0
 
-PODFILE CHECKSUM: 41afda6286fcad7a01cf190be5409b9a0bacb37e
+PODFILE CHECKSUM: c898c5dcebf7922a96b0c62c9ac6b6b6142745f6
 
 COCOAPODS: 1.3.1
