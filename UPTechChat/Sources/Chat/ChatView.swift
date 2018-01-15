@@ -30,6 +30,7 @@ final class ChatView: UIView {
         collectionView.keyboardDismissMode = .none
         collectionView.showsVerticalScrollIndicator = false
         collectionView.allowsSelection = true
+        collectionView.scrollsToTop = false
         dataSource.set(collectionView: collectionView)
         updateContentInset(previousKeyboardHeight: 0, keyboardHeight: 0)
 
