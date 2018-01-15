@@ -12,6 +12,7 @@ import ReactiveSwift
 import ReactiveCocoa
 
 final class ChatInputView: UIView {
+    fileprivate let addAttachmentButton = UIButton()
     fileprivate let textField = UITextField()
     fileprivate let sendButton = UIButton()
     fileprivate let (textFieldReturns, textFieldReturnsObserver) = Signal<Void, NoError>.pipe()
@@ -29,6 +30,20 @@ final class ChatInputView: UIView {
     private func setup() {
         let tintColor = UIColor(red: 12 / 255, green: 110 / 255, blue: 97 / 255, alpha: 1)
 
+        addAttachmentButton.translatesAutoresizingMaskIntoConstraints = false
+        addAttachmentButton.tintColor = tintColor
+        addAttachmentButton.setTitleColor(tintColor, for: .normal)
+        addAttachmentButton.setTitleColor(tintColor.withAlphaComponent(0.4), for: .focused)
+        addAttachmentButton.setTitle("P", for: .normal)
+        addAttachmentButton.titleLabel?.font = UIFont.systemFont(ofSize: 21)
+        self.addSubview(addAttachmentButton)
+        self.addConstraints([
+            addAttachmentButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 5),
+            addAttachmentButton.widthAnchor.constraint(equalToConstant: 40),
+            addAttachmentButton.topAnchor.constraint(equalTo: self.topAnchor),
+            addAttachmentButton.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        ])
+
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         containerView.layer.cornerRadius = 20
@@ -36,7 +51,7 @@ final class ChatInputView: UIView {
         containerView.layer.borderWidth = 1
         self.addSubview(containerView)
         self.addConstraints([
-            containerView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 12),
+            containerView.leadingAnchor.constraint(equalTo: addAttachmentButton.trailingAnchor),
             containerView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -12),
             containerView.topAnchor.constraint(equalTo: self.topAnchor, constant: 4),
             containerView.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -4),
@@ -91,6 +106,11 @@ extension Reactive where Base: ChatInputView {
             .map { _ in () }
 
         return Signal.merge([sendButtonTap, base.textFieldReturns])
+    }
+
+    var addAttachmentButtonTap: Signal<Void, NoError> {
+        return base.addAttachmentButton.reactive.controlEvents(.touchUpInside)
+            .map { _ in () }
     }
 
     var clearInputText: BindingTarget<Void> {

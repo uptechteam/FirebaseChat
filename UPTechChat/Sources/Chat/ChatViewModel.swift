@@ -26,6 +26,7 @@ final class ChatViewModel {
     let scrolledToTopObserver: Signal<Void, NoError>.Observer
     let shareMenuButtonTapObserver: Signal<Void, NoError>.Observer
     let retryTapObserver: Signal<Int, NoError>.Observer
+    let pickedImageAttachmentObserver: Signal<(Data, String), NoError>.Observer
 
     init(messagesProvider: MessagesProvider = .shared,
          userProvider: UserProvider = .shared,
@@ -37,6 +38,7 @@ final class ChatViewModel {
         let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
         let (shareMenuButtonTap, shareMenuButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (retryTap, retryTapObserver) = Signal<Int, NoError>.pipe()
+        let (pickedImageAttachment, pickedImageAttachmentObserver) = Signal<(Data, String), NoError>.pipe()
 
         // Forward reference to `clearInputText`
         // Events from `clearInputText` sent to this observer
@@ -53,7 +55,7 @@ final class ChatViewModel {
         let currentUser = userProvider.currentUser
 
         // All messages that are already sent or will be sent
-        let newLocalMessages = sendButtonTap
+        let newLocalTextMessages = sendButtonTap
             .withLatest(from: inputText.producer)
             .map { $1 }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -61,10 +63,14 @@ final class ChatViewModel {
             .withLatest(from: currentUser.producer)
             .map { LocalMessage(date: Date(), sender: $1, content: .text($0)) }
 
+        let newLocalImageMessages = pickedImageAttachment
+            .withLatest(from: currentUser.producer)
+            .map { LocalMessage(date: Date(), sender: $1, content: .image(data: $0.0, type: $0.1)) }
+
         // Forward reference to `messageSendRetried`
         let (retriedLocalMessages, retriedLocalMessagesObserver) = Signal<LocalMessage, NoError>.pipe()
 
-        let localMessages = Signal.merge([newLocalMessages, retriedLocalMessages])
+        let localMessages = Signal.merge([newLocalTextMessages, newLocalImageMessages, retriedLocalMessages])
 
         // Clear input text after adding new message
         let clearInputText = localMessages
@@ -206,6 +212,7 @@ final class ChatViewModel {
         self.scrolledToTopObserver = scrolledToTopObserver
         self.shareMenuButtonTapObserver = shareMenuButtonTapObserver
         self.retryTapObserver = retryTapObserver
+        self.pickedImageAttachmentObserver = pickedImageAttachmentObserver
     }
 }
 

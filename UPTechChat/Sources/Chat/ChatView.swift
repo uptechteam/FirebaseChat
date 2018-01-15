@@ -114,6 +114,10 @@ extension Reactive where Base: ChatView {
         return base.chatInputView.reactive.sendButtonTap
     }
 
+    var addAttachmentButtonTap: Signal<Void, NoError> {
+        return base.chatInputView.reactive.addAttachmentButtonTap
+    }
+
     var scrolledToTop: Signal<Void, NoError> {
         return base.collectionView.reactive.signal(forKeyPath: #keyPath(UIScrollView.contentOffset))
             .filterMap { $0 as? CGPoint }

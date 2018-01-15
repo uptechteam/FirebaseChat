@@ -193,11 +193,12 @@ final class MessagesProvider {
             case uploading(progress: Double)
             case completed(fileUrl: URL)
         }
-        func uploadData(_ data: Data, type: String) -> SignalProducer<UploadingState, MessagesProviderError> {
-            let reference = self.storage.reference(withPath: "images/\(chatEntity.identifier)")
+        func uploadData(_ data: Data, contentType: String) -> SignalProducer<UploadingState, MessagesProviderError> {
+            let randomIdentifier = UUID().uuidString
+            let reference = self.storage.reference(withPath: "images/\(chatEntity.identifier)/\(randomIdentifier)")
 
             let metadata = StorageMetadata()
-            metadata.contentType = type
+            metadata.contentType = contentType
 
             return reference.reactive.putData(data, metadata: metadata)
                 .mapError { MessagesProviderError.wrapped($0) }
@@ -260,7 +261,8 @@ final class MessagesProvider {
         switch localMessage.content {
         case let .image(data, type):
             // Upload data
-            return uploadData(data, type: type)
+            let contentType = "image/\(type)"
+            return uploadData(data, contentType: contentType)
                 .flatMap(.latest) { (uploadingState: UploadingState) -> SignalProducer<MessageSendingProgress, MessagesProviderError> in
                     switch uploadingState {
                     case .uploading(let progress):
