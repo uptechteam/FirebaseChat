@@ -10,19 +10,8 @@ import ReactiveSwift
 import ReactiveCocoa
 import Result
 
-private let dateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "MMM d, h:mm a"
-    return dateFormatter
-}()
-
-private let preciseTimeDateFormatter: DateFormatter = {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "h:mm a"
-    return dateFormatter
-}()
-
 final class ChatViewModel {
+    // Outputs
     let items: Property<[ChatViewItem]>
     let title: Property<String>
     let clearInputText: Signal<Void, NoError>
@@ -30,6 +19,7 @@ final class ChatViewModel {
     let showLastMessage: Signal<Void, NoError>
     let showUrlShareMenu: Signal<URL, NoError>
 
+    // Inputs
     let inputTextChangesObserver: Signal<String, NoError>.Observer
     let sendButtonTapObserver: Signal<Void, NoError>.Observer
     let scrolledToTopObserver: Signal<Void, NoError>.Observer
@@ -40,13 +30,17 @@ final class ChatViewModel {
          userProvider: UserProvider = .shared,
          scheduler: QueueScheduler = .messages,
          chatEntity: FirebaseEntity<Chat>) {
+        // Inputs
         let (inputTextChanges, inputTextChangesObserver) = Signal<String, NoError>.pipe()
         let (sendButtonTap, sendButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (scrolledToTop, scrolledToTopObserver) = Signal<Void, NoError>.pipe()
         let (shareMenuButtonTap, shareMenuButtonTapObserver) = Signal<Void, NoError>.pipe()
         let (retryTap, retryTapObserver) = Signal<Int, NoError>.pipe()
 
+        // Forward reference to `clearInputText`
+        // Events from `clearInputText` sent to this observer
         let (_clearInputText, _clearInputTextObserver) = Signal<Void, NoError>.pipe()
+
         let inputText = Property<String>(
             initial: "",
             then: Signal.merge([
@@ -58,7 +52,7 @@ final class ChatViewModel {
         let currentUser = userProvider.currentUser
 
         // All messages that are already sent or will be sent
-        let newlocalMessages = sendButtonTap
+        let newLocalMessages = sendButtonTap
             .withLatest(from: inputText.producer)
             .map { $1 }
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -66,20 +60,21 @@ final class ChatViewModel {
             .withLatest(from: currentUser.producer)
             .map { Message(body: $0, date: Date(), sender: $1) }
 
+        // Forward reference to `messageSendRetried`
         let (retriedLocalMessages, retriedLocalMessagesObserver) = Signal<Message, NoError>.pipe()
 
-        let localMessages = Signal.merge([newlocalMessages, retriedLocalMessages])
+        let localMessages = Signal.merge([newLocalMessages, retriedLocalMessages])
 
-        // Clear input text after adding new messages
+        // Clear input text after adding new message
         let clearInputText = localMessages
             .map { _ in () }
             .on(value: _clearInputTextObserver.send)
 
-        // Show last added message
+        // Show last message after adding new message
         let showLastMessage = localMessages
             .map { _ in () }
 
-        // Local message statuses
+        // Local messages
         let localMessageStatusesFlow = localMessages
             .flatMap(.merge) { message -> SignalProducer<(Message, LocalMessageStatus), NoError> in
                 let status = messagesProvider.post(message: message, to: chatEntity)
@@ -100,9 +95,11 @@ final class ChatViewModel {
             }
         let localMessageStatuses = Property(initial: [:], then: localMessageStatusesDictionary)
 
+        // Remote messages
         let messagesLoadableProperty = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
         let remoteMessages = messagesLoadableProperty.property.map { $0 ?? [] }
 
+        // All messages
         let allMessages = Property.combineLatest(localMessageStatuses, remoteMessages)
             .map { (localMessageStatuses, remoteMessages) -> [InternalMessage] in
                 // Due to FirebaseDatabase working logic, MessagesProvider can return local message
@@ -138,6 +135,9 @@ final class ChatViewModel {
                 return allMessages
             }
 
+        // Internal layout
+        // We split chat layout to internal and view to incapsulate
+        // layouting logic inside of view model.
         let internalLayoutProducer = SignalProducer.combineLatest(
             allMessages.producer,
             messagesLoadableProperty.isLoading.producer,
@@ -147,6 +147,11 @@ final class ChatViewModel {
             .map(makeInternalLayout)
         let internalLayout = Property(initial: [], then: internalLayoutProducer)
 
+        // View layout
+        let viewLayout = internalLayout
+            .map(makeViewLayout)
+
+        // Use internal layout to get message that should be retried to send
         let messageSendRetried = retryTap
             .withLatest(from: internalLayout.producer)
             .filterMap { (index, layout) -> Message? in
@@ -162,14 +167,13 @@ final class ChatViewModel {
             .on(value: retriedLocalMessagesObserver.send)
             .map { _ in () }
 
-        let viewLayout = internalLayout
-            .map(makeViewLayout)
-
+        // Make deep linking url for chat invitation
         let showUrlShareMenu = shareMenuButtonTap
             .filterMap { () -> URL? in
                 return URL(string: "uptechchat://join/\(chatEntity.identifier)")
             }
 
+        // Properties
         self.items = viewLayout
         self.title = Property(value: chatEntity.model.name)
         self.clearInputText = clearInputText
@@ -212,6 +216,7 @@ private enum InternalMessage {
     }
 }
 
+// Represents view model internal chat layout item
 private enum InternalLayoutItem {
     case loading
     case dateHeader(Date)
@@ -219,6 +224,7 @@ private enum InternalLayoutItem {
     case message(message: InternalMessage, isCurrentSender: Bool, isStartOfGroup: Bool, isEndOfGroup: Bool)
 }
 
+// Makes internal chat layout
 private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: Bool, currentUser: User) -> [InternalLayoutItem] {
     struct DateGroup {
         let date: Date
@@ -234,21 +240,30 @@ private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: 
     func splitMessages(_ messages: [InternalMessage]) -> [DateGroup] {
         var dateGroups = [DateGroup]()
         messages.forEach { (message) in
+            // Take previous added message
             if let previousMessage = dateGroups.last?.senderGroups.last?.messages.last {
+                // If previous message date differs from current message date too much
                 if message.model.date.timeIntervalSince(previousMessage.model.date) > 300 {
+                    // Create a new date group
                     let newDateGroup = DateGroup(date: message.model.date, senderGroups: [SenderGroup(sender: message.model.sender, messages: [message])])
                     dateGroups.append(newDateGroup)
                 } else {
+                    // Take a last created date group
                     var senderGroups = dateGroups[dateGroups.count - 1].senderGroups
+                    // If previous message sender differs from current message sender
                     if previousMessage.model.sender != message.model.sender {
+                        // Create a new sender group
                         let newGroup = SenderGroup(sender: message.model.sender, messages: [message])
                         senderGroups.append(newGroup)
                     } else {
+                        // Add message to last sender group
                         senderGroups[senderGroups.count - 1].messages.append(message)
                     }
+
                     dateGroups[dateGroups.count - 1].senderGroups = senderGroups
                 }
             } else {
+                // Add initial message
                 dateGroups = [DateGroup(
                     date: message.model.date,
                     senderGroups: [SenderGroup(
@@ -262,41 +277,48 @@ private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: 
         return dateGroups
     }
 
+    // Messages
     let messageItems: [InternalLayoutItem] = {
         if internalMessages.isEmpty && isLoading == false {
             return [.noMessagesHeader]
         }
 
-        return splitMessages(internalMessages).flatMap { dateGroup -> [InternalLayoutItem] in
-            let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [InternalLayoutItem] in
-                return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> InternalLayoutItem in
-                    return InternalLayoutItem.message(
-                        message: message,
-                        isCurrentSender: message.model.sender == currentUser,
-                        isStartOfGroup: senderGroupIndex == 0,
-                        isEndOfGroup: senderGroupIndex == senderGroup.messages.count - 1
-                    )
+        // Converting message groups to internal layout
+        // Adds titles and crooked bubbles to sender groups
+        // Adds headers for date groups
+        return splitMessages(internalMessages)
+            .flatMap { dateGroup -> [InternalLayoutItem] in
+                let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [InternalLayoutItem] in
+                    return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> InternalLayoutItem in
+                        return InternalLayoutItem.message(
+                            message: message,
+                            isCurrentSender: message.model.sender == currentUser,
+                            isStartOfGroup: senderGroupIndex == 0,
+                            isEndOfGroup: senderGroupIndex == senderGroup.messages.count - 1
+                        )
+                    }
                 }
+
+                let headerItem = InternalLayoutItem.dateHeader(dateGroup.date)
+
+                return [headerItem] + messageItems
             }
-
-            let headerItem = InternalLayoutItem.dateHeader(dateGroup.date)
-
-            return [headerItem] + messageItems
-        }
     }()
 
+    // Loading indicator
     let loadingItem: [InternalLayoutItem] = isLoading ? [.loading] : []
 
     return loadingItem + messageItems
 }
 
+// Converts viewModel's internal layout into view layout
 private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewItem] {
     return internalLayout.map { internalLayoutItem -> ChatViewItem in
         switch internalLayoutItem {
         case .loading:
             return .loading
         case .dateHeader(let date):
-            return .header(dateFormatter.string(from: date))
+            return .header(makeDateHeaderTitle(for: date))
         case .noMessagesHeader:
             return .header("No messages yet")
         case let .message(message, isCurrentSender, isStartOfGroup, isEndOfGroup):
@@ -312,11 +334,51 @@ private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewIt
                 body: message.model.body,
                 isCurrentSender: isCurrentSender,
                 isCrooked: isEndOfGroup,
-                hiddenText: preciseTimeDateFormatter.string(from: message.model.date),
+                hiddenText: timeDateFormatter.string(from: message.model.date),
                 statusText: isFailed ? "Not delivered" : nil,
                 isRetryShown: isFailed
             )
             return .message(content)
         }
+    }
+}
+
+private let defaultDateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "E, MMM d"
+    return dateFormatter
+}()
+
+private let weekDayDateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "EEEE"
+    return dateFormatter
+}()
+
+private let timeDateFormatter: DateFormatter = {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "h:mm a"
+    return dateFormatter
+}()
+
+private func makeDateHeaderTitle(for date: Date) -> String {
+    let calendar = Calendar.current
+    let currentDate = Date()
+
+    if calendar.isDateInToday(date) {
+        // Today
+        return "Today \(timeDateFormatter.string(from: date))"
+    } else if calendar.isDateInYesterday(date) {
+        // Yesterday
+        return "Yesterday \(timeDateFormatter.string(from: date))"
+    } else if
+        calendar.isDate(date, equalTo: currentDate, toGranularity: Calendar.Component.weekOfYear) &&
+        calendar.isDate(date, equalTo: currentDate, toGranularity: Calendar.Component.year)
+    {
+        // This week
+        return "\(weekDayDateFormatter.string(from: date)) \(timeDateFormatter.string(from: date)))"
+    } else {
+        // Other cases
+        return "\(defaultDateFormatter.string(from: date)), \(timeDateFormatter.string(from: date))"
     }
 }
