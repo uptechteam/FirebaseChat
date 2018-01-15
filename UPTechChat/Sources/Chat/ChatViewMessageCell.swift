@@ -21,20 +21,16 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         NSAttributedStringKey.font: UIFont.systemFont(ofSize: Constants.StatusFontSize, weight: .medium)
     ]
 
+    private let containerView = UIView()
+    private let bubbleContainerView = UIView()
     private let bubbleView = UIImageView()
     private let titleLabel = UILabel()
     private let textLabel = UILabel()
     private let stackView = UIStackView()
-    private var pinToLeadingConstraint: NSLayoutConstraint?
-    private var pinToTrailingConstraint: NSLayoutConstraint?
     private let crookView = CrookView()
-    private var crookViewPinToLeadingConstraint: NSLayoutConstraint?
-    private var crookViewPinToTrailingConstraint: NSLayoutConstraint?
     private let hiddenLabel = UILabel()
     private let statusLabel = UILabel()
     fileprivate let retryButton = UIButton(type: UIButtonType.infoLight)
-    private var retryButtonPinToTrailingConstraint: NSLayoutConstraint?
-    private var retryButtonPinToLeadingConstraint: NSLayoutConstraint?
 
     private let content = MutableProperty<ChatViewMessageContent?>(nil)
     private let horizontalPanGestureState = MutableProperty<UIPanGestureRecognizer?>(nil)
@@ -49,19 +45,30 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     }
 
     private func setup() {
-        bubbleView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(bubbleView)
-        let pinToLeadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset)
-        pinToLeadingConstraint.priority = UILayoutPriority.defaultLow
-        self.pinToLeadingConstraint = pinToLeadingConstraint
-        let pinToTrailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
-        pinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
-        self.pinToTrailingConstraint = pinToTrailingConstraint
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(containerView)
         self.addConstraints([
-            pinToLeadingConstraint,
-            pinToTrailingConstraint,
-            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: Constants.BubbleTopOffset),
-            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: Constants.MaxBubbleWidthRatio)
+            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            containerView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+        ])
+
+        bubbleContainerView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.addSubview(bubbleContainerView)
+        self.addConstraints([
+            bubbleContainerView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            bubbleContainerView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: Constants.BubbleTopOffset)
+        ])
+
+        bubbleView.translatesAutoresizingMaskIntoConstraints = false
+        bubbleContainerView.addSubview(bubbleView)
+        self.addConstraints([
+            bubbleView.trailingAnchor.constraint(equalTo: bubbleContainerView.trailingAnchor, constant: -Constants.BubbleSideOffset),
+            bubbleView.topAnchor.constraint(equalTo: bubbleContainerView.topAnchor),
+            bubbleView.bottomAnchor.constraint(equalTo: bubbleContainerView.bottomAnchor),
+            bubbleView.leadingAnchor.constraint(equalTo: bubbleContainerView.leadingAnchor),
+            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: containerView.widthAnchor, multiplier: Constants.MaxBubbleWidthRatio)
         ])
 
         titleLabel.textColor = UIColor(red: 253 / 255, green: 145 / 255, blue: 80 / 255, alpha: 1)
@@ -84,18 +91,11 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         ])
 
         crookView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.insertSubview(crookView, at: 0)
-        let crookViewPinToLeadingConstraint = crookView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: -9)
-        crookViewPinToLeadingConstraint.priority = UILayoutPriority.defaultLow
-        self.crookViewPinToLeadingConstraint = crookViewPinToLeadingConstraint
-        let crookViewPinToTrailingConstraint = crookView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: 9)
-        crookViewPinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
-        self.crookViewPinToTrailingConstraint = crookViewPinToTrailingConstraint
+        containerView.insertSubview(crookView, at: 0)
         self.addConstraints([
             crookView.widthAnchor.constraint(equalToConstant: 20),
             crookView.heightAnchor.constraint(equalToConstant: 16),
-            crookViewPinToLeadingConstraint,
-            crookViewPinToTrailingConstraint,
+            crookView.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: 9),
             crookView.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: 0)
         ])
 
@@ -113,25 +113,18 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusLabel.textColor = UIColor.red
         statusLabel.textAlignment = .right
-        contentView.addSubview(statusLabel)
+        containerView.addSubview(statusLabel)
         self.addConstraints([
             statusLabel.topAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: 2),
-            statusLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.BubbleSideOffset),
-            statusLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.BubbleSideOffset)
+            statusLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: Constants.BubbleSideOffset),
+            statusLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -Constants.BubbleSideOffset)
         ])
 
         retryButton.translatesAutoresizingMaskIntoConstraints = false
         retryButton.tintColor = UIColor.red
-        contentView.addSubview(retryButton)
-        let retryButtonPinToTrailingConstraint = retryButton.trailingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 0)
-        retryButtonPinToTrailingConstraint.priority = UILayoutPriority.defaultHigh
-        self.retryButtonPinToTrailingConstraint = retryButtonPinToTrailingConstraint
-        let retryButtonPinToLeadingConstraint = retryButton.leadingAnchor.constraint(equalTo: bubbleView.trailingAnchor, constant: 0)
-        retryButtonPinToLeadingConstraint.priority = UILayoutPriority.defaultLow
-        self.retryButtonPinToLeadingConstraint = retryButtonPinToLeadingConstraint
+        containerView.addSubview(retryButton)
         self.addConstraints([
-            retryButtonPinToTrailingConstraint,
-            retryButtonPinToLeadingConstraint,
+            retryButton.trailingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 0),
             retryButton.widthAnchor.constraint(equalToConstant: 44),
             retryButton.heightAnchor.constraint(equalToConstant: 40),
             retryButton.centerYAnchor.constraint(equalTo: bubbleView.centerYAnchor)
@@ -152,25 +145,20 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                 self.titleLabel.attributedText = NSAttributedString(string: content.title ?? "", attributes: ChatViewMessageCell.titleAttributes)
 
                 self.crookView.isHidden = !content.isCrooked
-                self.crookView.pointsToRight = content.isCurrentSender
-
-                let pinToLeadingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultLow : .defaultHigh
-                self.pinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
-                self.crookViewPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
-                self.retryButtonPinToLeadingConstraint?.priority = pinToLeadingConstraintPriority
-                let pinToTrailingConstraintPriority = content.isCurrentSender ? UILayoutPriority.defaultHigh : .defaultLow
-                self.pinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
-                self.crookViewPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
-                self.retryButtonPinToTrailingConstraint?.priority = pinToTrailingConstraintPriority
-                self.setNeedsLayout()
-                self.layoutIfNeeded()
 
                 self.hiddenLabel.text = content.hiddenText
 
                 self.statusLabel.attributedText = NSAttributedString(string: content.statusText ?? "", attributes: ChatViewMessageCell.statusAttributes)
-                self.statusLabel.textAlignment = content.isCurrentSender ? .right : .left
 
                 self.retryButton.isHidden = !content.isRetryShown
+
+                let mirrorTransform = CGAffineTransform(scaleX: content.isCurrentSender ? 1 : -1, y: 1)
+                self.containerView.transform = mirrorTransform
+                self.statusLabel.transform = mirrorTransform
+                self.titleLabel.transform = mirrorTransform
+                self.textLabel.transform = mirrorTransform
+                self.retryButton.transform = mirrorTransform
+                self.statusLabel.textAlignment = content.isCurrentSender ? .right : .left
         }
 
         Signal.combineLatest(
@@ -267,12 +255,6 @@ private class CrookView: UIView {
         }
     }
 
-    var pointsToRight = true {
-        didSet {
-            setNeedsDisplay()
-        }
-    }
-
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear
@@ -288,10 +270,6 @@ private class CrookView: UIView {
         bezierPath.addQuadCurve(to: CGPoint(x: rect.width, y: rect.height), controlPoint: CGPoint(x: 0, y: rect.height))
         bezierPath.addQuadCurve(to: CGPoint(x: rect.width / 2, y: 0), controlPoint: CGPoint(x: rect.width / 2, y: rect.height))
         bezierPath.close()
-
-        if !pointsToRight {
-            bezierPath.apply(CGAffineTransform(scaleX: -1, y: 1).translatedBy(x: -rect.width, y: 0))
-        }
 
         color.setFill()
         bezierPath.fill()
