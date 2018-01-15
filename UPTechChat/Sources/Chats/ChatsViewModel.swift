@@ -103,7 +103,7 @@ final class ChatsViewModel {
 
                     return chatEntities.map { chatEntity -> ChatsViewItem in
                         let title = chatEntity.model.name
-                        let subtitle = chatEntity.model.lastMessage.map { "\($0.sender.name): \($0.body)" } ?? "No messages yet"
+                        let subtitle = chatEntity.model.lastMessage.map { "\($0.sender.name): \($0.text ?? "")" } ?? "No messages yet"
                         return .chat(title: title, subtitle: subtitle)
                     }
                 }()

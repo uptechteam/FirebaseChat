@@ -8,6 +8,7 @@
 
 import Foundation
 import FirebaseDatabase
+import FirebaseStorage
 import ObjectMapper
 import ReactiveSwift
 import Result
@@ -15,23 +16,26 @@ import Result
 private let DefaultMessagesBatchCount = 40
 
 enum MessagesProviderError: Swift.Error {
+    case firebaseInternalError
     case wrapped(Swift.Error)
 }
 
-struct MessagesResult {
-    let messages: Property<[FirebaseEntity<Message>]>
-    let isLoadingMore: Property<Bool>
-    let errors: Signal<MessagesProviderError, NoError>
+enum MessageSendingProgress {
+    case uploadingData(progress: Double)
+    case updatingDatabase
+    case completed
 }
 
 final class MessagesProvider {
     static let shared = MessagesProvider()
 
     private let database: Database
+    private let storage: Storage
     private let scheduler: QueueScheduler
 
-    init(database: Database = .database(), scheduler: QueueScheduler = .messages) {
+    init(database: Database = .database(), storage: Storage = .storage(), scheduler: QueueScheduler = .messages) {
         self.database = database
+        self.storage = storage
         self.scheduler = scheduler
     }
 
@@ -182,39 +186,101 @@ final class MessagesProvider {
         return LoadableProperty(property: messages, isLoading: isLoadingMore.map { $0 }, errors: errors)
     }
 
-    func post(message: Message, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<Void, MessagesProviderError> {
-        func updateChatEntity() -> SignalProducer<Void, MessagesProviderError> {
-            let reference = self.database.reference(withPath: "chats/\(chatEntity.identifier)/lastMessage")
-            return SignalProducer { observer, lifetime in
-                let json = Mapper<Message>().toJSON(message)
-                reference.setValue(json) { error, _ in
-                    if let error = error {
-                        observer.send(error: .wrapped(error))
-                    } else {
-                        observer.send(value: ())
-                        observer.sendCompleted()
+    func send(localMessage: LocalMessage, to chatEntity: FirebaseEntity<Chat>) -> SignalProducer<MessageSendingProgress, MessagesProviderError> {
+        // Sending messages consists splits into 2 steps:
+        // 1. Uploading message data content to Firebase storage
+        enum UploadingState {
+            case uploading(progress: Double)
+            case completed(fileUrl: URL)
+        }
+        func uploadData(_ data: Data, type: String) -> SignalProducer<UploadingState, MessagesProviderError> {
+            let reference = self.storage.reference(withPath: "images/\(chatEntity.identifier)")
+
+            let metadata = StorageMetadata()
+            metadata.contentType = type
+
+            return reference.reactive.putData(data, metadata: metadata)
+                .mapError { MessagesProviderError.wrapped($0) }
+                .flatMap(.latest) { state -> SignalProducer<UploadingState, MessagesProviderError> in
+                    switch state {
+                    case .uploading(let progress):
+                        return .init(value: .uploading(progress: progress))
+                    case .completed(let metadata):
+                        // Firebase should automatically generate one download url for new uploads
+                        guard let url = metadata.downloadURL() else {
+                            return .init(error: MessagesProviderError.firebaseInternalError)
+                        }
+
+                        return .init(value: .completed(fileUrl: url))
                     }
-                }
             }
         }
 
-        func postMessage() -> SignalProducer<Void, MessagesProviderError> {
-            let reference = self.database.reference(withPath: "messages/\(chatEntity.identifier)")
-            return SignalProducer { observer, lifetime in
-                let mapper = Mapper<Message>()
-                let json = mapper.toJSON(message)
-                reference.childByAutoId().setValue(json) { (error, reference) in
-                    if let error = error {
-                        observer.send(error: .wrapped(error))
-                    } else {
-                        observer.send(value: ())
-                        observer.sendCompleted()
+        // 2. Putting message model to Firebase database
+        func send(message: Message) -> SignalProducer<Void, MessagesProviderError> {
+            // Updating chat last message
+            func updateChatEntity() -> SignalProducer<Void, MessagesProviderError> {
+                let reference = self.database.reference(withPath: "chats/\(chatEntity.identifier)/lastMessage")
+                return SignalProducer { observer, lifetime in
+                    let json = Mapper<Message>().toJSON(message)
+                    reference.setValue(json) { error, _ in
+                        if let error = error {
+                            observer.send(error: .wrapped(error))
+                        } else {
+                            observer.send(value: ())
+                            observer.sendCompleted()
+                        }
                     }
                 }
             }
+
+            // Creating new message entity
+            func postMessage() -> SignalProducer<Void, MessagesProviderError> {
+                let reference = self.database.reference(withPath: "messages/\(chatEntity.identifier)")
+                return SignalProducer { observer, lifetime in
+                    let mapper = Mapper<Message>()
+                    let json = mapper.toJSON(message)
+                    reference.childByAutoId().setValue(json) { (error, reference) in
+                        if let error = error {
+                            observer.send(error: .wrapped(error))
+                        } else {
+                            observer.send(value: ())
+                            observer.sendCompleted()
+                        }
+                    }
+                }
+            }
+
+            // Zip here to do steps simultaneously
+            return SignalProducer.zip(updateChatEntity(), postMessage())
+                .map { _ in () }
         }
 
-        return SignalProducer.zip(updateChatEntity(), postMessage())
-            .map { _ in () }
+        // Steps for sending a message based on content:
+        switch localMessage.content {
+        case let .image(data, type):
+            // Upload data
+            return uploadData(data, type: type)
+                .flatMap(.latest) { (uploadingState: UploadingState) -> SignalProducer<MessageSendingProgress, MessagesProviderError> in
+                    switch uploadingState {
+                    case .uploading(let progress):
+                        return .init(value: .uploadingData(progress: progress))
+                    case .completed(let imageUrl):
+                        // Create message model with received url
+                        let message = Message(date: localMessage.date, sender: localMessage.sender, contentType: .image, text: nil, image: imageUrl)
+                        // Update database
+                        return send(message: message)
+                            .map { MessageSendingProgress.completed }
+                            .prefix(value: .updatingDatabase)
+                    }
+                }
+        case .text(let text):
+            // Skip upload data and create message immediately
+            let message = Message(date: localMessage.date, sender: localMessage.sender, contentType: .text, text: text, image: nil)
+            // Update database
+            return send(message: message)
+                .map { MessageSendingProgress.completed }
+                .prefix(value: .updatingDatabase)
+        }
     }
 }

@@ -20,9 +20,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
-        Storage.storage().reference(withPath: "images").putFile(from: URL(string: "")!, metadata: nil) { (metadata, error) in
-            
-        }
 
         let chatsViewModel = ChatsViewModel()
         self.chatsViewModel = chatsViewModel

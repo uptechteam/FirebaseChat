@@ -17,6 +17,7 @@ final class ChatViewModel {
     let clearInputText: Signal<Void, NoError>
     let messageSendRetried: Signal<Void, NoError>
     let showLastMessage: Signal<Void, NoError>
+    let showAlert: Signal<(String, String), NoError>
     let showUrlShareMenu: Signal<URL, NoError>
 
     // Inputs
@@ -58,10 +59,10 @@ final class ChatViewModel {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .withLatest(from: currentUser.producer)
-            .map { Message(body: $0, date: Date(), sender: $1) }
+            .map { LocalMessage(date: Date(), sender: $1, content: .text($0)) }
 
         // Forward reference to `messageSendRetried`
-        let (retriedLocalMessages, retriedLocalMessagesObserver) = Signal<Message, NoError>.pipe()
+        let (retriedLocalMessages, retriedLocalMessagesObserver) = Signal<LocalMessage, NoError>.pipe()
 
         let localMessages = Signal.merge([newLocalMessages, retriedLocalMessages])
 
@@ -75,39 +76,47 @@ final class ChatViewModel {
             .map { _ in () }
 
         // Local messages
-        let localMessageStatusesFlow = localMessages
-            .flatMap(.merge) { message -> SignalProducer<(Message, LocalMessageStatus), NoError> in
-                let status = messagesProvider.post(message: message, to: chatEntity)
-                    .map { LocalMessageStatus.sent }
-                    .flatMapError { error in SignalProducer<LocalMessageStatus, NoError>(value: .failed(error)) }
-                    .prefix(value: .pending)
+        let localMessagesFlow = localMessages
+            .flatMap(.merge) { localMessage -> SignalProducer<(LocalMessage, LocalMessageStatus), NoError> in
+                let status = messagesProvider.send(localMessage: localMessage, to: chatEntity)
+                    .map { sendingProgress -> LocalMessageStatus in
+                        switch sendingProgress {
+                        case .uploadingData(let progress):
+                            return .uploadingData(progress: progress)
+                        case .updatingDatabase:
+                            return .updatingDatabase
+                        case .completed:
+                            return .sent
+                        }
+                    }
+                    .flatMapError { error in SignalProducer<LocalMessageStatus, NoError>(value: .failed(error: error)) }
 
-                return status.map { (message, $0) }
+                return status.map { (localMessage, $0) }
             }
 
-        let localMessageStatusesDictionary = localMessageStatusesFlow
-            .scan([Message: LocalMessageStatus]()) { accum, args in
+        let localMessagesDictionaryFlow = localMessagesFlow
+            .scan([MessageIdentity: (LocalMessage, LocalMessageStatus)]()) { accum, args in
                 let (message, messageStatus) = args
 
                 var accum = accum
-                accum[message] = messageStatus
+                accum[messageIdentity(localMessage: message)] = (message, messageStatus)
                 return accum
             }
-        let localMessageStatuses = Property(initial: [:], then: localMessageStatusesDictionary)
+        let localMessagesDictionary = Property(initial: [:], then: localMessagesDictionaryFlow)
 
         // Remote messages
         let messagesLoadableProperty = messagesProvider.fetchMessageEntities(chatEntity: chatEntity, loadMoreMessages: scrolledToTop)
         let remoteMessages = messagesLoadableProperty.property.map { $0 ?? [] }
 
         // All messages
-        let allMessages = Property.combineLatest(localMessageStatuses, remoteMessages)
-            .map { (localMessageStatuses, remoteMessages) -> [InternalMessage] in
+        let allMessages = Property.combineLatest(localMessagesDictionary, remoteMessages)
+            .map { (localMessagesDictionary, remoteMessages) -> [InternalMessage] in
                 // Due to FirebaseDatabase working logic, MessagesProvider can return local message
                 // in messages batch faster than local message becomes sent.
-                // We filter out pending messages out of remote messages to avoid duplicates.
+                // We filter out uploading and updating database messages out of remote messages to avoid duplicates.
                 let remoteMessagesWithoutPending = remoteMessages
                     .filter { remoteMessage in
-                        if let localStatus = localMessageStatuses[remoteMessage.model], case .pending = localStatus {
+                        if let (_, localStatus) = localMessagesDictionary[messageIdentity(remoteMessage: remoteMessage.model)], localStatus.isPending {
                             return false
                         }
 
@@ -116,16 +125,17 @@ final class ChatViewModel {
 
                 // We leave pending and failed messages to be displayed only.
                 // Suppose that sent messages were received from `MessagesProvider` already.
-                let pendingOrFailedLocalMessages = localMessageStatuses
-                    .filter { (_: Message, messageStatus: LocalMessageStatus) -> Bool in
+                let pendingOrFailedLocalMessages = localMessagesDictionary
+                    .map { $0.value }
+                    .filter { (_, messageStatus) -> Bool in
                         switch messageStatus {
-                        case .pending, .failed:
+                        case .uploadingData, .updatingDatabase, .failed:
                             return true
                         case .sent:
                             return false
                         }
                     }
-                    .sorted(by: { (lhs: (Message, LocalMessageStatus), rhs: (Message, LocalMessageStatus)) -> Bool in
+                    .sorted(by: { (lhs: (LocalMessage, LocalMessageStatus), rhs: (LocalMessage, LocalMessageStatus)) -> Bool in
                         return lhs.0.date.timeIntervalSince1970 < rhs.0.date.timeIntervalSince1970
                     })
 
@@ -154,18 +164,28 @@ final class ChatViewModel {
         // Use internal layout to get message that should be retried to send
         let messageSendRetried = retryTap
             .withLatest(from: internalLayout.producer)
-            .filterMap { (index, layout) -> Message? in
+            .filterMap { (index, layout) -> LocalMessage? in
                 let layoutItem = layout[index]
-
-                switch layoutItem {
-                case .message(let message, _, _, _):
-                    return message.model
-                default:
+                // Failed local message only
+                guard
+                    case let .message(message, _, _, _) = layoutItem,
+                    case let .local(localMessage, status) = message,
+                    case .failed = status
+                else {
                     return nil
                 }
+
+                return localMessage
             }
             .on(value: retriedLocalMessagesObserver.send)
             .map { _ in () }
+
+        let showAlert = messagesLoadableProperty.errors
+            .map { error -> (String, String) in
+                let title = "Failed loading messages"
+                let message = error.localizedDescription
+                return (title, message)
+            }
 
         // Make deep linking url for chat invitation
         let showUrlShareMenu = shareMenuButtonTap
@@ -179,6 +199,7 @@ final class ChatViewModel {
         self.clearInputText = clearInputText
         self.messageSendRetried = messageSendRetried
         self.showLastMessage = showLastMessage
+        self.showAlert = showAlert
         self.showUrlShareMenu = showUrlShareMenu
         self.inputTextChangesObserver = inputTextChangesObserver
         self.sendButtonTapObserver = sendButtonTapObserver
@@ -189,29 +210,65 @@ final class ChatViewModel {
 }
 
 private enum LocalMessageStatus {
+    // Messages that uploading data
+    case uploadingData(progress: Double)
+
     // Messages in process of sending
-    case pending
+    case updatingDatabase
 
     // Messages failed to be sent with error
-    case failed(Swift.Error)
+    case failed(error: Swift.Error)
 
     // Sent messages
     case sent
+
+    // Is message sending in progress
+    var isPending: Bool {
+        switch self {
+        case .uploadingData, .updatingDatabase:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 private enum InternalMessage {
     // Messages created locally.
-    case local(Message, LocalMessageStatus)
+    case local(LocalMessage, LocalMessageStatus)
 
     // Messages received from `MessagesProvider`.
     case remote(FirebaseEntity<Message>)
 
-    var model: Message {
+    var date: Date {
         switch self {
-        case let .local(message, _):
-            return message
+        case .local(let localMessage, _):
+            return localMessage.date
         case .remote(let entity):
-            return entity.model
+            return entity.model.date
+        }
+    }
+
+    var sender: User {
+        switch self {
+        case .local(let localMessage, _):
+            return localMessage.sender
+        case .remote(let entity):
+            return entity.model.sender
+        }
+    }
+
+    var text: String? {
+        switch self {
+        case .local(let localMessage, _):
+            switch localMessage.content {
+            case .text(let text):
+                return text
+            case .image:
+                return nil
+            }
+        case .remote(let entity):
+            return entity.model.text
         }
     }
 }
@@ -243,17 +300,17 @@ private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: 
             // Take previous added message
             if let previousMessage = dateGroups.last?.senderGroups.last?.messages.last {
                 // If previous message date differs from current message date too much
-                if message.model.date.timeIntervalSince(previousMessage.model.date) > 300 {
+                if message.date.timeIntervalSince(previousMessage.date) > 300 {
                     // Create a new date group
-                    let newDateGroup = DateGroup(date: message.model.date, senderGroups: [SenderGroup(sender: message.model.sender, messages: [message])])
+                    let newDateGroup = DateGroup(date: message.date, senderGroups: [SenderGroup(sender: message.sender, messages: [message])])
                     dateGroups.append(newDateGroup)
                 } else {
                     // Take a last created date group
                     var senderGroups = dateGroups[dateGroups.count - 1].senderGroups
                     // If previous message sender differs from current message sender
-                    if previousMessage.model.sender != message.model.sender {
+                    if previousMessage.sender != message.sender {
                         // Create a new sender group
-                        let newGroup = SenderGroup(sender: message.model.sender, messages: [message])
+                        let newGroup = SenderGroup(sender: message.sender, messages: [message])
                         senderGroups.append(newGroup)
                     } else {
                         // Add message to last sender group
@@ -265,9 +322,9 @@ private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: 
             } else {
                 // Add initial message
                 dateGroups = [DateGroup(
-                    date: message.model.date,
+                    date: message.date,
                     senderGroups: [SenderGroup(
-                        sender: message.model.sender,
+                        sender: message.sender,
                         messages: [message]
                         )]
                     )]
@@ -289,14 +346,15 @@ private func makeInternalLayout(internalMessages: [InternalMessage], isLoading: 
         return splitMessages(internalMessages)
             .flatMap { dateGroup -> [InternalLayoutItem] in
                 let messageItems = dateGroup.senderGroups.flatMap { senderGroup -> [InternalLayoutItem] in
-                    return senderGroup.messages.enumerated().map { (senderGroupIndex, message) -> InternalLayoutItem in
-                        return InternalLayoutItem.message(
-                            message: message,
-                            isCurrentSender: message.model.sender == currentUser,
-                            isStartOfGroup: senderGroupIndex == 0,
-                            isEndOfGroup: senderGroupIndex == senderGroup.messages.count - 1
-                        )
-                    }
+                    return senderGroup.messages.enumerated()
+                        .map { (senderGroupIndex, message) -> InternalLayoutItem in
+                            return InternalLayoutItem.message(
+                                message: message,
+                                isCurrentSender: message.sender == currentUser,
+                                isStartOfGroup: senderGroupIndex == 0,
+                                isEndOfGroup: senderGroupIndex == senderGroup.messages.count - 1
+                            )
+                        }
                 }
 
                 let headerItem = InternalLayoutItem.dateHeader(dateGroup.date)
@@ -330,11 +388,11 @@ private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewIt
                 return false
             }()
             let content = ChatViewMessageContent(
-                title: isStartOfGroup && !isCurrentSender ? message.model.sender.name : nil,
-                body: message.model.body,
+                title: isStartOfGroup && !isCurrentSender ? message.sender.name : nil,
+                body: message.text ?? "",
                 isCurrentSender: isCurrentSender,
                 isCrooked: isEndOfGroup,
-                hiddenText: timeDateFormatter.string(from: message.model.date),
+                hiddenText: timeDateFormatter.string(from: message.date),
                 statusText: isFailed ? "Not delivered" : nil,
                 isRetryShown: isFailed
             )
@@ -381,4 +439,18 @@ private func makeDateHeaderTitle(for date: Date) -> String {
         // Other cases
         return "\(defaultDateFormatter.string(from: date)), \(timeDateFormatter.string(from: date))"
     }
+}
+
+private typealias MessageIdentity = String
+
+private func messageIdentity(localMessage: LocalMessage) -> MessageIdentity {
+    return messageIdentity(date: localMessage.date, sender: localMessage.sender)
+}
+
+private func messageIdentity(remoteMessage: Message) -> MessageIdentity {
+    return messageIdentity(date: remoteMessage.date, sender: remoteMessage.sender)
+}
+
+private func messageIdentity(date: Date, sender: User) -> MessageIdentity {
+    return "\(sender.name) \(date.timeIntervalSince1970)"
 }

@@ -35,7 +35,7 @@ extension Reactive where Base: StorageReference {
 
             let handle = task.observe(.progress) { snapshot in
                 if let progress = snapshot.progress?.fractionCompleted {
-                    observer.send(value: .uploading(progress))
+                    observer.send(value: .uploading(progress: progress))
                 }
             }
 

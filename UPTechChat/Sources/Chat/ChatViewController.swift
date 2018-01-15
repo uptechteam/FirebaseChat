@@ -57,6 +57,8 @@ final class ChatViewController: UIViewController {
         chatView.reactive.showLastMessage <~ viewModel.showLastMessage
             .take(duringLifetimeOf: self)
 
+        reactive.showAlert <~ viewModel.showAlert
+
         viewModel.showUrlShareMenu
             .take(duringLifetimeOf: self)
             .observeValues { [weak self] url in

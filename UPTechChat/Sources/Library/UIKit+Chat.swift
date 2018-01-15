@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import ReactiveSwift
+import Result
 
 extension UIViewController {
     func showAlert(for error: Error) {
@@ -17,6 +19,14 @@ extension UIViewController {
         let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alertController.addAction(UIAlertAction(title: "Close", style: .default, handler: nil))
         self.present(alertController, animated: true, completion: nil)
+    }
+}
+
+extension Reactive where Base: UIViewController {
+    var showAlert: BindingTarget<(String, String)> {
+        return BindingTarget(on: QueueScheduler.main, lifetime: self.lifetime) { [weak base] (title, message) in
+            base?.showAlert(title: title, message: message)
+        }
     }
 }
 
