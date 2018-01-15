@@ -22,6 +22,7 @@
 		6A7D9CF51FFE5AED00ED398D /* UIKit+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */; };
 		6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A7D9CF61FFE69F500ED398D /* MessagesProvider.swift */; };
 		6AA0758C2004D179005D08E4 /* ChatViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA0758B2004D179005D08E4 /* ChatViewCell.swift */; };
+		6AB0850C200CC734002C1C45 /* FirebaseStorage+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB0850B200CC734002C1C45 /* FirebaseStorage+Chat.swift */; };
 		6AB592D01FFE38B80056479A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB592CF1FFE38B80056479A /* Models.swift */; };
 		6AB592D21FFE3B6C0056479A /* Provider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB592D11FFE3B6C0056479A /* Provider.swift */; };
 		6AD3DC83200A0B1F0011240A /* ChatsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD3DC82200A0B1F0011240A /* ChatsProvider.swift */; };
@@ -61,6 +62,7 @@
 		6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIKit+Chat.swift"; sourceTree = "<group>"; };
 		6A7D9CF61FFE69F500ED398D /* MessagesProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesProvider.swift; sourceTree = "<group>"; };
 		6AA0758B2004D179005D08E4 /* ChatViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewCell.swift; sourceTree = "<group>"; };
+		6AB0850B200CC734002C1C45 /* FirebaseStorage+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FirebaseStorage+Chat.swift"; sourceTree = "<group>"; };
 		6AB592CF1FFE38B80056479A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		6AB592D11FFE3B6C0056479A /* Provider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Provider.swift; sourceTree = "<group>"; };
 		6AD3DC82200A0B1F0011240A /* ChatsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsProvider.swift; sourceTree = "<group>"; };
@@ -134,6 +136,7 @@
 				6A6E3EF22007F48E0093AF40 /* UserProvider.swift */,
 				6AE686F92003813100E5580B /* Reusable.swift */,
 				6A7D9CF41FFE5AED00ED398D /* UIKit+Chat.swift */,
+				6AB0850B200CC734002C1C45 /* FirebaseStorage+Chat.swift */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -383,6 +386,7 @@
 				6AA0758C2004D179005D08E4 /* ChatViewCell.swift in Sources */,
 				6AE686EE2003762F00E5580B /* ChatView.swift in Sources */,
 				6A7D9CF71FFE69F500ED398D /* MessagesProvider.swift in Sources */,
+				6AB0850C200CC734002C1C45 /* FirebaseStorage+Chat.swift in Sources */,
 				6A09FD9F200AAFC90040C652 /* ChatCollectionView.swift in Sources */,
 				6AE686FD200396EE00E5580B /* ChatViewLoadingCell.swift in Sources */,
 				6A7D9CF31FFE53D800ED398D /* ChatViewController.swift in Sources */,
