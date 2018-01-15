@@ -117,7 +117,7 @@ extension Message: ImmutableMappable {
         sender = try map.value(Keys.Sender)
         contentType = try map.value(Keys.ContentType)
         text = try? map.value(Keys.Text)
-        image = try? map.value(Keys.Image)
+        image = try? map.value(Keys.Image, using: URLTransform())
     }
 
     func mapping(map: Map) {
@@ -125,7 +125,7 @@ extension Message: ImmutableMappable {
         sender >>> map[Keys.Sender]
         contentType >>> map[Keys.ContentType]
         text >>> map[Keys.Text]
-        image >>> map[Keys.Image]
+        image >>> (map[Keys.Image], URLTransform())
     }
 }
 

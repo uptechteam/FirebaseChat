@@ -9,6 +9,7 @@
 import UIKit
 import ReactiveSwift
 import Result
+import Kingfisher
 
 final class ChatViewMessageCell: ChatViewCell, Reusable {
     static let textAttributes: [NSAttributedStringKey: Any] = [
@@ -28,6 +29,9 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private let textLabel = UILabel()
     private let stackView = UIStackView()
     private let crookView = CrookView()
+    private let imageView = UIImageView()
+    private var imageViewWidthConstraint: NSLayoutConstraint?
+    private var imageViewHeightConstraint: NSLayoutConstraint?
     private let hiddenLabel = UILabel()
     private let statusLabel = UILabel()
     fileprivate let retryButton = UIButton(type: UIButtonType.infoLight)
@@ -78,10 +82,19 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
         textLabel.translatesAutoresizingMaskIntoConstraints = false
         textLabel.numberOfLines = 0
 
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        let imageViewWidthConstraint = imageView.widthAnchor.constraint(equalToConstant: 200)
+        imageViewWidthConstraint.priority = .defaultHigh
+        imageView.addConstraints([imageView.heightAnchor.constraint(equalToConstant: 200), imageViewWidthConstraint])
+
         stackView.addArrangedSubview(titleLabel)
         stackView.addArrangedSubview(textLabel)
+        stackView.addArrangedSubview(imageView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
+        stackView.alignment = .trailing
         bubbleView.addSubview(stackView)
         self.addConstraints([
             stackView.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: Constants.BubbleInsets.left),
@@ -139,7 +152,22 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                 self.bubbleView.image = content.isCurrentSender ? Constants.CurrentSenderBubbleBackgroundImage : Constants.OtherSenderBubbleBackgroundImage
                 self.crookView.color = content.isCurrentSender ? Constants.CurrentSenderBubbleColor : Constants.OtherSenderBubbleColor
 
-                self.textLabel.attributedText = NSAttributedString(string: content.body, attributes: ChatViewMessageCell.textAttributes)
+                switch content.type {
+                case .text(let text):
+                    self.textLabel.isHidden = false
+                    self.imageView.isHidden = true
+                    self.textLabel.attributedText = NSAttributedString(string: text, attributes: ChatViewMessageCell.textAttributes)
+                case .image(let image):
+                    self.textLabel.isHidden = true
+                    self.imageView.isHidden = false
+                    switch image {
+                    case .raw(let data, _):
+                        self.imageView.image = UIImage(data: data)
+                    case .url(let url):
+                        self.imageView.kf.setImage(with: url, options: [.processor(ResizingImageProcessor(referenceSize: CGSize(width: 200, height: 200), mode: .aspectFill))])
+                    }
+                }
+
                 self.textLabel.textColor = content.isCurrentSender ? UIColor.white : UIColor.black
 
                 self.titleLabel.attributedText = NSAttributedString(string: content.title ?? "", attributes: ChatViewMessageCell.titleAttributes)
@@ -158,6 +186,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                 self.titleLabel.transform = mirrorTransform
                 self.textLabel.transform = mirrorTransform
                 self.retryButton.transform = mirrorTransform
+                self.imageView.transform = mirrorTransform
                 self.statusLabel.textAlignment = content.isCurrentSender ? .right : .left
         }
 
@@ -212,14 +241,29 @@ extension ChatViewMessageCell {
         let availableWidth = collectionViewFrame.width * Constants.MaxBubbleWidthRatio - 28
 
         let titleHeight: CGFloat = {
-            guard let title = content.title else { return 0 }
+            guard let title = content.title else {
+                return 0
+            }
+
             let textBoundingRect = (title as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: [], attributes: titleAttributes, context: nil)
             return CGFloat(ceilf(Float(textBoundingRect.height)))
         }()
 
         let textHeight: CGFloat = {
-            let textBoundingRect = (content.body as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: textAttributes, context: nil)
+            guard case .text(let text) = content.type else {
+                return 0
+            }
+
+            let textBoundingRect = (text as NSString).boundingRect(with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude), options: NSStringDrawingOptions.usesLineFragmentOrigin, attributes: textAttributes, context: nil)
             return CGFloat(ceilf(Float(textBoundingRect.height)))
+        }()
+
+        let imageHeight: CGFloat = {
+            guard case .image = content.type else {
+                return 0
+            }
+
+            return 200
         }()
 
         let statusHeight: CGFloat = {
@@ -228,7 +272,7 @@ extension ChatViewMessageCell {
             return CGFloat(ceilf(Float(textBoundingRect.height))) + 4
         }()
 
-        return titleHeight + textHeight + statusHeight + Constants.BubbleTopOffset + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom
+        return titleHeight + textHeight + imageHeight + statusHeight + Constants.BubbleTopOffset + Constants.BubbleInsets.top + Constants.BubbleInsets.bottom
     }
 }
 

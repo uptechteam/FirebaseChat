@@ -8,9 +8,45 @@
 
 import Foundation
 
+enum Image {
+    case raw(data: Data, type: String)
+    case url(URL)
+}
+
+extension Image: Equatable {
+    static func ==(lhs: Image, rhs: Image) -> Bool {
+        switch (lhs, rhs) {
+        case let (.raw(lData, lType), .raw(rData, rType)):
+            return lData == rData && lType == rType
+        case let (.url(lUrl), .url(rUrl)):
+            return lUrl == rUrl
+        default:
+            return false
+        }
+    }
+}
+
+enum ChatViewMessageContentType {
+    case text(String)
+    case image(Image)
+}
+
+extension ChatViewMessageContentType: Equatable {
+    static func ==(lhs: ChatViewMessageContentType, rhs: ChatViewMessageContentType) -> Bool {
+        switch (lhs, rhs) {
+        case let (.text(lText), .text(rText)):
+            return lText == rText
+        case let (.image(lImage), .image(rImage)):
+            return lImage == rImage
+        default:
+            return false
+        }
+    }
+}
+
 struct ChatViewMessageContent {
+    let type: ChatViewMessageContentType
     let title: String?
-    let body: String
     let isCurrentSender: Bool
     let isCrooked: Bool
     let hiddenText: String
@@ -20,8 +56,8 @@ struct ChatViewMessageContent {
 
 extension ChatViewMessageContent: Equatable {
     static func ==(lhs: ChatViewMessageContent, rhs: ChatViewMessageContent) -> Bool {
-        return lhs.title == rhs.title &&
-            lhs.body == rhs.body &&
+        return lhs.type == rhs.type &&
+            lhs.title == rhs.title &&
             lhs.isCurrentSender == rhs.isCurrentSender &&
             lhs.isCrooked == rhs.isCrooked &&
             lhs.hiddenText == rhs.hiddenText &&

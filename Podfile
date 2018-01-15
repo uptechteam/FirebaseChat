@@ -14,5 +14,6 @@ target 'UPTechChat' do
   pod 'ObjectMapper', '~> 3.1'
   pod 'ReactiveCocoa', '~> 7.0'
   pod 'Changeset', '~> 3.0'
+  pod 'Kingfisher', '~> 4.0'
 
 end

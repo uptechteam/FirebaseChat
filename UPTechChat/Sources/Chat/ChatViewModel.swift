@@ -264,20 +264,6 @@ private enum InternalMessage {
             return entity.model.sender
         }
     }
-
-    var text: String? {
-        switch self {
-        case .local(let localMessage, _):
-            switch localMessage.content {
-            case .text(let text):
-                return text
-            case .image:
-                return nil
-            }
-        case .remote(let entity):
-            return entity.model.text
-        }
-    }
 }
 
 // Represents view model internal chat layout item
@@ -394,9 +380,28 @@ private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewIt
 
                 return false
             }()
+
+            let contentType: ChatViewMessageContentType
+            switch message {
+            case .local(let localMessage, _):
+                switch localMessage.content {
+                case let .image(data, type):
+                    contentType = .image(.raw(data: data, type: type))
+                case .text(let text):
+                    contentType = .text(text)
+                }
+            case .remote(let entity):
+                switch entity.model.contentType {
+                case .text:
+                    contentType = entity.model.text.map { .text($0) } ?? .text("Text should be here")
+                case .image :
+                    contentType = entity.model.image.map { .image(Image.url($0)) } ?? .text("Image should be here")
+                }
+            }
+
             let content = ChatViewMessageContent(
+                type: contentType,
                 title: isStartOfGroup && !isCurrentSender ? message.sender.name : nil,
-                body: message.text ?? "",
                 isCurrentSender: isCurrentSender,
                 isCrooked: isEndOfGroup,
                 hiddenText: timeDateFormatter.string(from: message.date),
