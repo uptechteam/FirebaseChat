@@ -383,10 +383,17 @@ private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewIt
 
             let contentType: ChatViewMessageContentType
             switch message {
-            case .local(let localMessage, _):
+            case let .local(localMessage, localMessageStatus):
                 switch localMessage.content {
                 case let .image(data, type):
-                    contentType = .image(.raw(data: data, type: type))
+                    let loadingProgress: Double?
+                    switch localMessageStatus {
+                    case .uploadingData(let progress):
+                        loadingProgress = progress
+                    default:
+                        loadingProgress = nil
+                    }
+                    contentType = .image(image: .raw(data: data, type: type), loadingProgress: loadingProgress)
                 case .text(let text):
                     contentType = .text(text)
                 }
@@ -395,7 +402,7 @@ private func makeViewLayout(internalLayout: [InternalLayoutItem]) -> [ChatViewIt
                 case .text:
                     contentType = entity.model.text.map { .text($0) } ?? .text("Text should be here")
                 case .image :
-                    contentType = entity.model.image.map { .image(Image.url($0)) } ?? .text("Image should be here")
+                    contentType = entity.model.image.map { .image(image: Image.url($0), loadingProgress: nil) } ?? .text("Image should be here")
                 }
             }
 

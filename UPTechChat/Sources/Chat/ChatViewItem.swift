@@ -28,7 +28,7 @@ extension Image: Equatable {
 
 enum ChatViewMessageContentType {
     case text(String)
-    case image(Image)
+    case image(image: Image, loadingProgress: Double?)
 }
 
 extension ChatViewMessageContentType: Equatable {
@@ -36,8 +36,8 @@ extension ChatViewMessageContentType: Equatable {
         switch (lhs, rhs) {
         case let (.text(lText), .text(rText)):
             return lText == rText
-        case let (.image(lImage), .image(rImage)):
-            return lImage == rImage
+        case let (.image(lImage, lLoadingProgress), .image(rImage, rLoadingProgress)):
+            return lImage == rImage && lLoadingProgress == rLoadingProgress
         default:
             return false
         }

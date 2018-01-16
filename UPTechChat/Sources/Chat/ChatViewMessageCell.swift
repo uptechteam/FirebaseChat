@@ -29,7 +29,7 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
     private let textLabel = UILabel()
     private let stackView = UIStackView()
     private let crookView = CrookView()
-    private let imageView = UIImageView()
+    private let imageView = LoadingImageView(frame: CGRect())
     private var imageViewWidthConstraint: NSLayoutConstraint?
     private var imageViewHeightConstraint: NSLayoutConstraint?
     private let hiddenLabel = UILabel()
@@ -157,14 +157,17 @@ final class ChatViewMessageCell: ChatViewCell, Reusable {
                     self.textLabel.isHidden = false
                     self.imageView.isHidden = true
                     self.textLabel.attributedText = NSAttributedString(string: text, attributes: ChatViewMessageCell.textAttributes)
-                case .image(let image):
+                case .image(let image, let loadingProgress):
                     self.textLabel.isHidden = true
                     self.imageView.isHidden = false
+                    self.imageView.setProgress(loadingProgress)
+
+                    let imageProcessor = ResizingImageProcessor(referenceSize: CGSize(width: 200, height: 200), mode: .aspectFill)
                     switch image {
                     case .raw(let data, _):
-                        self.imageView.image = UIImage(data: data)
+                        self.imageView.image = imageProcessor.process(item: .data(data), options: [])
                     case .url(let url):
-                        self.imageView.kf.setImage(with: url, options: [.processor(ResizingImageProcessor(referenceSize: CGSize(width: 200, height: 200), mode: .aspectFill))])
+                        self.imageView.kf.setImage(with: url, options: [.processor(imageProcessor)])
                     }
                 }
 
@@ -317,5 +320,95 @@ private class CrookView: UIView {
 
         color.setFill()
         bezierPath.fill()
+    }
+}
+
+private class LoadingImageView: UIImageView {
+    private let overlayView = UIView()
+    private let progressView = CircularProgressView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        setup()
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError()
+    }
+
+    private func setup() {
+        overlayView.translatesAutoresizingMaskIntoConstraints = false
+        overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+        self.addSubview(overlayView)
+        self.addConstraints([
+            overlayView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            overlayView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            overlayView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            overlayView.topAnchor.constraint(equalTo: self.topAnchor)
+        ])
+
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(progressView)
+        self.addConstraints([
+            self.progressView.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            self.progressView.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            self.progressView.widthAnchor.constraint(equalToConstant: 70),
+            self.progressView.heightAnchor.constraint(equalToConstant: 70)
+        ])
+    }
+
+    func setProgress(_ progress: Double?) {
+        overlayView.isHidden = progress == nil
+        progressView.isHidden = progress == nil
+        progressView.progress = progress ?? 0
+    }
+}
+
+private class CircularProgressView: UIView {
+    var progress: Double = 0.5 {
+        didSet {
+            label.text = "\(Int(progress * 100))%"
+            setNeedsDisplay()
+        }
+    }
+
+    private let label = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+    }
+
+    private func setup() {
+        self.backgroundColor = UIColor.clear
+
+        label.font = UIFont.systemFont(ofSize: 17)
+        label.textColor = UIColor.white
+        label.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(label)
+        self.addConstraints([
+            self.label.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            self.label.centerYAnchor.constraint(equalTo: self.centerYAnchor)
+        ])
+    }
+
+    override func draw(_ rect: CGRect) {
+        drawCircle(rect: rect, startAngle: 0, endAngle: CGFloat.pi * 2, color: UIColor.white.withAlphaComponent(0.2))
+        drawCircle(rect: rect, startAngle: -CGFloat.pi * 0.5, endAngle: CGFloat.pi * CGFloat(2 * progress - 0.5), color: UIColor.white)
+    }
+
+    private func drawCircle(rect: CGRect, startAngle: CGFloat, endAngle: CGFloat, color: UIColor) {
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let strokeWidth: CGFloat = 5
+        let radius: CGFloat = (min(rect.width, rect.height) - strokeWidth) / 2
+        let bezierPath = UIBezierPath(arcCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+        bezierPath.lineWidth = strokeWidth
+        color.setStroke()
+        bezierPath.stroke()
     }
 }
